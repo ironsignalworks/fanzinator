@@ -1,8 +1,8 @@
 import { motion } from "motion/react";
-import { Image, Video, Hexagon, Type, MoveDiagonal2, RotateCw } from "lucide-react";
+import { Image, Video, Hexagon, Type, MoveDiagonal2, RotateCw, Pencil } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-export type NodeType = "image" | "video" | "interactive" | "text";
+export type NodeType = "image" | "video" | "interactive" | "text" | "stroke";
 export type TextAlign = "left" | "center" | "right";
 
 export interface NodeTextStyle {
@@ -35,6 +35,9 @@ export interface NodeData {
   invertColors?: boolean;
   motionReduced?: boolean;
   textStyle?: NodeTextStyle;
+  strokePoints?: { x: number; y: number }[];
+  strokeWidth?: number;
+  strokeColor?: string;
 }
 
 interface WorldNodeProps {
@@ -96,6 +99,8 @@ export function WorldNode({
         return <Hexagon className="w-6 h-6" />;
       case "text":
         return <Type className="w-6 h-6" />;
+      case "stroke":
+        return <Pencil className="w-6 h-6" />;
     }
   };
 
@@ -110,6 +115,8 @@ export function WorldNode({
         return { width: 176, height: 176 };
       case "text":
         return { width: 220, height: 96 };
+      case "stroke":
+        return { width: node.width ?? 1, height: node.height ?? 1 };
       default:
         return { width: 192, height: 192 };
     }
@@ -317,6 +324,22 @@ export function WorldNode({
               </div>
             )}
           </div>
+        ) : node.type === "stroke" && (node.strokePoints?.length ?? 0) > 1 ? (
+          <svg
+            className="w-full h-full"
+            viewBox={`0 0 ${Math.max(1, size.width)} ${Math.max(1, size.height)}`}
+            preserveAspectRatio="none"
+          >
+            <polyline
+              points={node.strokePoints?.map((point) => `${point.x},${point.y}`).join(" ") ?? ""}
+              fill="none"
+              stroke={node.strokeColor ?? "#fafafa"}
+              strokeWidth={node.strokeWidth ?? 6}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+            />
+          </svg>
         ) : previewSrc ? (
           <img
             src={previewSrc}
@@ -344,7 +367,7 @@ export function WorldNode({
           </div>
         )}
 
-        {(isHovered || isSelected) && (
+        {(isHovered || isSelected) && node.type !== "stroke" && (
           <button
             type="button"
             aria-label="Rotate layer"
@@ -355,7 +378,7 @@ export function WorldNode({
           </button>
         )}
 
-        {(isHovered || isSelected) && (
+        {(isHovered || isSelected) && node.type !== "stroke" && (
           <button
             type="button"
             aria-label="Resize layer"

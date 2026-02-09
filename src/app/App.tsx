@@ -332,6 +332,7 @@ export default function App() {
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [showMobileLeftSidebar, setShowMobileLeftSidebar] = useState(false);
   const [showMobileRightSidebar, setShowMobileRightSidebar] = useState(false);
+  const [activeTool, setActiveTool] = useState<"brush" | "eraser">("brush");
   const dragDepthRef = useRef(0);
   const exportAspectRatioRef = useRef(1200 / 800);
   const exportPreviewDragRef = useRef<{
@@ -1997,6 +1998,8 @@ export default function App() {
             onCreateCanvas={handleCreateCanvas}
             onRenameCanvas={handleRenameCanvas}
             onDeleteCanvas={handleDeleteCanvas}
+            activeTool={activeTool}
+            onToolChange={setActiveTool}
           />
         </div>
         )}
@@ -2184,6 +2187,8 @@ export default function App() {
                 onCreateCanvas={handleCreateCanvas}
                 onRenameCanvas={handleRenameCanvas}
                 onDeleteCanvas={handleDeleteCanvas}
+                activeTool={activeTool}
+                onToolChange={setActiveTool}
               />
             </div>
           </div>

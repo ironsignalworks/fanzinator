@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Layers, ChevronDown, Plus, Pencil, Trash2, Eye, EyeOff } from "lucide-react";
+import { Layers, ChevronDown, Plus, Pencil, Trash2, Eye, EyeOff, Eraser } from "lucide-react";
 import { ScrollArea } from "../components/ui/scroll-area";
 
 interface LeftSidebarProps {
@@ -20,6 +20,8 @@ interface LeftSidebarProps {
   onCreateCanvas: () => string;
   onRenameCanvas: (nextName: string) => void;
   onDeleteCanvas: () => void;
+  activeTool: "brush" | "eraser";
+  onToolChange: (tool: "brush" | "eraser") => void;
 }
 
 export function LeftSidebar({
@@ -40,6 +42,8 @@ export function LeftSidebar({
   onCreateCanvas,
   onRenameCanvas,
   onDeleteCanvas,
+  activeTool,
+  onToolChange,
 }: LeftSidebarProps) {
   const [isRenaming, setIsRenaming] = useState(false);
   const currentCanvas = canvases.find((canvas) => canvas.id === currentCanvasId);
@@ -264,6 +268,37 @@ export function LeftSidebar({
                   No layers yet. Add one to create a layer.
                 </div>
               )}
+            </div>
+            <div className="mt-4">
+              <div className="text-[10px] text-[#737373] uppercase tracking-wider font-light mb-2">
+                Tools
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => onToolChange("brush")}
+                  className={`h-10 px-2 border text-[10px] uppercase tracking-wider rounded-none transition-colors flex items-center justify-center gap-1 ${
+                    activeTool === "brush"
+                      ? "border-white/30 bg-white/10 text-[#fafafa]"
+                      : "border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20"
+                  }`}
+                >
+                  <Pencil className="w-3 h-3" />
+                  Brush
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onToolChange("eraser")}
+                  className={`h-10 px-2 border text-[10px] uppercase tracking-wider rounded-none transition-colors flex items-center justify-center gap-1 ${
+                    activeTool === "eraser"
+                      ? "border-white/30 bg-white/10 text-[#fafafa]"
+                      : "border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20"
+                  }`}
+                >
+                  <Eraser className="w-3 h-3" />
+                  Eraser
+                </button>
+              </div>
             </div>
           </div>
         </ScrollArea>
