@@ -140,6 +140,24 @@ label.cursor-pointer {
   height: var(--control-icon-size) !important;
 }
 
+[data-role="app-shell"] .icon-optical-up {
+  transform: scale(1.22);
+  transform-origin: center;
+}
+
+[data-role="app-shell"] .tool-mode-icon {
+  width: 1.05rem !important;
+  height: 1.05rem !important;
+  stroke-width: 2.15 !important;
+}
+
+[data-role="app-shell"] .tool-mode-icon-select,
+[data-role="app-shell"] .tool-mode-icon-eraser {
+  width: 1.16rem !important;
+  height: 1.16rem !important;
+  stroke-width: 2.3 !important;
+}
+
 [data-role="app-shell"] .control-pill {
   min-height: var(--control-height) !important;
   height: var(--control-height) !important;

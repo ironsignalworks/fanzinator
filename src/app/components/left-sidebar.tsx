@@ -222,7 +222,7 @@ export function LeftSidebar({
                       : "border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20"
                   }`}
                 >
-                  <MousePointer2 className="w-4 h-4 stroke-[2.2]" />
+                  <MousePointer2 className="tool-mode-icon tool-mode-icon-select" />
                   Select
                 </button>
                 <button
@@ -234,7 +234,7 @@ export function LeftSidebar({
                       : "border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20"
                   }`}
                 >
-                  <Pencil className="w-4 h-4 stroke-[2.2]" />
+                  <Pencil className="tool-mode-icon" />
                   Brush
                 </button>
                 <button
@@ -246,7 +246,7 @@ export function LeftSidebar({
                       : "border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20"
                   }`}
                 >
-                  <Eraser className="w-4 h-4 stroke-[2.2]" />
+                  <Eraser className="tool-mode-icon tool-mode-icon-eraser" />
                   Eraser
                 </button>
               </div>
