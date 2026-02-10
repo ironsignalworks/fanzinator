@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Layers, ChevronDown, Plus, Pencil, Trash2, Eye, EyeOff, Eraser } from "lucide-react";
+import { Layers, ChevronDown, Plus, Pencil, Trash2, Eye, EyeOff, Eraser, MousePointer2 } from "lucide-react";
 import { ScrollArea } from "../components/ui/scroll-area";
 
 interface LeftSidebarProps {
@@ -11,17 +11,19 @@ interface LeftSidebarProps {
   nodes: { id: string; title: string; type: string; visible: boolean }[];
   onReorderNodes: (sourceId: string, targetId: string) => void;
   onToggleLayerVisibility: (id: string, visible: boolean) => void;
+  onDeleteLayer: (id: string) => void;
   canvasBackground: string;
   onCanvasBackgroundChange: (color: string) => void;
   canvasPreset: "zine" | "acid" | "retro" | "mono" | "neon" | "paper" | "none";
   onCanvasPresetChange: (preset: "zine" | "acid" | "retro" | "mono" | "neon" | "paper" | "none") => void;
   selectedLayerId: string;
   onSelectLayer: (id: string) => void;
+  onRenameLayer: (id: string, nextTitle: string) => void;
   onCreateCanvas: () => string;
   onRenameCanvas: (nextName: string) => void;
   onDeleteCanvas: () => void;
-  activeTool: "brush" | "eraser";
-  onToolChange: (tool: "brush" | "eraser") => void;
+  activeTool: "select" | "brush" | "eraser";
+  onToolChange: (tool: "select" | "brush" | "eraser") => void;
 }
 
 export function LeftSidebar({
@@ -33,12 +35,14 @@ export function LeftSidebar({
   nodes,
   onReorderNodes,
   onToggleLayerVisibility,
+  onDeleteLayer,
   canvasBackground,
   onCanvasBackgroundChange,
   canvasPreset,
   onCanvasPresetChange,
   selectedLayerId,
   onSelectLayer,
+  onRenameLayer,
   onCreateCanvas,
   onRenameCanvas,
   onDeleteCanvas,
@@ -49,6 +53,8 @@ export function LeftSidebar({
   const currentCanvas = canvases.find((canvas) => canvas.id === currentCanvasId);
   const [draftName, setDraftName] = useState(currentCanvas?.name ?? "");
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [renamingLayerId, setRenamingLayerId] = useState<string | null>(null);
+  const [draftLayerTitle, setDraftLayerTitle] = useState("");
   useEffect(() => {
     if (!isRenaming) {
       setDraftName(currentCanvas?.name ?? "");
@@ -89,17 +95,13 @@ export function LeftSidebar({
                 value={draftName}
                 onChange={(event) => setDraftName(event.target.value)}
                 onBlur={() => {
-                  if (draftName.trim()) {
-                    onRenameCanvas(draftName);
-                  }
+                  onRenameCanvas(draftName);
                   setIsRenaming(false);
                 }}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
                     event.preventDefault();
-                    if (draftName.trim()) {
-                      onRenameCanvas(draftName);
-                    }
+                    onRenameCanvas(draftName);
                     setIsRenaming(false);
                   }
                   if (event.key === "Escape") {
@@ -154,7 +156,7 @@ export function LeftSidebar({
               className="h-10 w-10 border border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20 rounded-none transition-colors flex items-center justify-center flex-shrink-0"
               aria-label="Delete canvas"
             >
-              <Trash2 className="w-3 h-3" />
+              <Trash2 />
             </button>
           </div>
         </>
@@ -196,14 +198,57 @@ export function LeftSidebar({
                   type="color"
                   value={canvasBackground}
                   onChange={(event) => onCanvasBackgroundChange(event.target.value)}
-                  className="h-10 w-10 border border-white/10 bg-transparent flex-shrink-0"
+                  className="control-square h-10 w-10 border border-white/10 bg-transparent flex-shrink-0"
                 />
                 <input
                   type="text"
                   value={canvasBackground}
                   onChange={(event) => onCanvasBackgroundChange(event.target.value)}
-                  className="w-full h-10 px-3 border border-white/10 bg-transparent text-[#fafafa] text-xs uppercase tracking-wider rounded-none focus:border-white/20 focus:outline-none min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
+                  className="control-pill w-full h-10 px-3 border border-white/10 bg-transparent text-[#fafafa] text-xs uppercase tracking-wider rounded-none focus:border-white/20 focus:outline-none min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
                 />
+              </div>
+            </div>
+            <div className="mt-4 mb-3">
+              <div className="text-[10px] text-[#737373] uppercase tracking-wider font-light mb-2">
+                Tools
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => onToolChange("select")}
+                  className={`control-pill h-10 px-2 border text-[10px] uppercase tracking-wider rounded-none transition-colors flex items-center justify-center gap-1 ${
+                    activeTool === "select"
+                      ? "border-white/30 bg-white/10 text-[#fafafa]"
+                      : "border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20"
+                  }`}
+                >
+                  <MousePointer2 className="w-3 h-3" />
+                  Select
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onToolChange("brush")}
+                  className={`control-pill h-10 px-2 border text-[10px] uppercase tracking-wider rounded-none transition-colors flex items-center justify-center gap-1 ${
+                    activeTool === "brush"
+                      ? "border-white/30 bg-white/10 text-[#fafafa]"
+                      : "border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20"
+                  }`}
+                >
+                  <Pencil className="w-3 h-3" />
+                  Brush
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onToolChange("eraser")}
+                  className={`control-pill h-10 px-2 border text-[10px] uppercase tracking-wider rounded-none transition-colors flex items-center justify-center gap-1 ${
+                    activeTool === "eraser"
+                      ? "border-white/30 bg-white/10 text-[#fafafa]"
+                      : "border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20"
+                  }`}
+                >
+                  <Eraser className="w-3 h-3" />
+                  Eraser
+                </button>
               </div>
             </div>
             <div className="text-[10px] text-[#737373] uppercase tracking-wider font-light mb-2">
@@ -224,8 +269,17 @@ export function LeftSidebar({
                     setDraggingId(null);
                   }}
                   onDragEnd={() => setDraggingId(null)}
-                  onClick={() => onSelectLayer(node.id)}
-                  className={`w-full max-w-full h-10 px-3 rounded-none border text-xs font-light transition-colors cursor-grab overflow-hidden min-w-0 flex items-center ${
+                  onClick={() => {
+                    if (activeTool !== "select") return;
+                    onSelectLayer(node.id);
+                  }}
+                  onDoubleClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setRenamingLayerId(node.id);
+                    setDraftLayerTitle(node.title || "");
+                  }}
+                  className={`w-full max-w-full h-10 px-2 rounded-none border text-[10px] font-light transition-colors cursor-grab overflow-hidden min-w-0 flex items-center ${
                     selectedLayerId === node.id
                       ? "border-white/30 bg-white/10 text-[#fafafa]"
                       : draggingId === node.id
@@ -233,12 +287,38 @@ export function LeftSidebar({
                       : "border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20"
                   }`}
                 >
-                  <div className="grid grid-cols-[minmax(0,1fr)_5.5rem_2rem] items-center gap-2 min-w-0 w-full">
-                    <span className="truncate min-w-0">{node.title || "Untitled"}</span>
-                    <span className="text-[10px] uppercase tracking-wider text-[#737373] whitespace-nowrap truncate text-right">
+                  <div className="grid grid-cols-[minmax(0,1fr)_3.75rem_5.25rem] items-center gap-1 min-w-0 w-full">
+                    {renamingLayerId === node.id ? (
+                      <input
+                        value={draftLayerTitle}
+                        onChange={(event) => setDraftLayerTitle(event.target.value)}
+                        onClick={(event) => event.stopPropagation()}
+                        onBlur={() => {
+                          onRenameLayer(node.id, draftLayerTitle.trim() || "Untitled");
+                          setRenamingLayerId(null);
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            onRenameLayer(node.id, draftLayerTitle.trim() || "Untitled");
+                            setRenamingLayerId(null);
+                          }
+                          if (event.key === "Escape") {
+                            event.preventDefault();
+                            setRenamingLayerId(null);
+                            setDraftLayerTitle(node.title || "");
+                          }
+                        }}
+                        className="w-full h-5 bg-transparent border border-white/15 px-1 text-[10px] text-[#fafafa] rounded-none focus:outline-none focus:border-white/30"
+                        autoFocus
+                      />
+                    ) : (
+                      <span className="truncate min-w-0">{node.title || "Untitled"}</span>
+                    )}
+                    <span className="text-[9px] uppercase tracking-wider text-[#737373] whitespace-nowrap truncate text-right">
                       {node.type}
                     </span>
-                    <div className="flex items-center justify-end flex-shrink-0">
+                    <div className="flex items-center justify-end gap-1 flex-shrink-0">
                       <button
                         type="button"
                         onClick={(event) => {
@@ -246,7 +326,7 @@ export function LeftSidebar({
                           event.stopPropagation();
                           onToggleLayerVisibility(node.id, !node.visible);
                         }}
-                        className={`h-6 w-6 flex items-center justify-center rounded-none border transition-colors ${
+                        className={`control-square h-10 w-10 flex items-center justify-center rounded-none border transition-colors ${
                           node.visible
                             ? "border-white/20 text-[#fafafa] bg-white/5"
                             : "border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20"
@@ -254,10 +334,22 @@ export function LeftSidebar({
                         aria-label={node.visible ? "Hide layer" : "Show layer"}
                       >
                         {node.visible ? (
-                          <Eye className="w-3.5 h-3.5" />
+                          <Eye />
                         ) : (
-                          <EyeOff className="w-3.5 h-3.5" />
+                          <EyeOff />
                         )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          onDeleteLayer(node.id);
+                        }}
+                        className="control-square h-10 w-10 flex items-center justify-center rounded-none border border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20 transition-colors"
+                        aria-label="Delete layer"
+                      >
+                        <Trash2 />
                       </button>
                     </div>
                   </div>
@@ -268,37 +360,6 @@ export function LeftSidebar({
                   No layers yet. Add one to create a layer.
                 </div>
               )}
-            </div>
-            <div className="mt-4">
-              <div className="text-[10px] text-[#737373] uppercase tracking-wider font-light mb-2">
-                Tools
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => onToolChange("brush")}
-                  className={`h-10 px-2 border text-[10px] uppercase tracking-wider rounded-none transition-colors flex items-center justify-center gap-1 ${
-                    activeTool === "brush"
-                      ? "border-white/30 bg-white/10 text-[#fafafa]"
-                      : "border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20"
-                  }`}
-                >
-                  <Pencil className="w-3 h-3" />
-                  Brush
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onToolChange("eraser")}
-                  className={`h-10 px-2 border text-[10px] uppercase tracking-wider rounded-none transition-colors flex items-center justify-center gap-1 ${
-                    activeTool === "eraser"
-                      ? "border-white/30 bg-white/10 text-[#fafafa]"
-                      : "border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20"
-                  }`}
-                >
-                  <Eraser className="w-3 h-3" />
-                  Eraser
-                </button>
-              </div>
             </div>
           </div>
         </ScrollArea>

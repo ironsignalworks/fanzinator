@@ -105,6 +105,84 @@ label.cursor-pointer {
   letter-spacing: 0.01em;
 }
 
+/* Unified control density for pills/buttons/toggles/dropdowns. */
+[data-role="app-shell"] {
+  --control-height: 1.43rem;   /* +10% */
+  --control-font: 0.605rem;    /* +10% */
+  --control-pad-x: 0.44rem;    /* +10% */
+  --control-gap: 0.22rem;      /* +10% */
+}
+
+[data-role="app-shell"] :is(
+  button,
+  [role="button"],
+  label.cursor-pointer,
+  select
+) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-height);
+  height: var(--control-height);
+  padding-left: var(--control-pad-x);
+  padding-right: var(--control-pad-x);
+  font-size: var(--control-font);
+  line-height: 1;
+  text-align: center;
+  letter-spacing: 0.04em;
+  gap: var(--control-gap);
+  border-radius: 0;
+}
+
+[data-role="app-shell"] :is(button, [role="button"], label.cursor-pointer) :is(svg) {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+[data-role="app-shell"] .control-pill {
+  min-height: var(--control-height);
+  height: var(--control-height);
+  padding-left: var(--control-pad-x);
+  padding-right: var(--control-pad-x);
+  font-size: var(--control-font);
+  line-height: 1;
+  letter-spacing: 0.04em;
+  border-radius: 0;
+}
+
+[data-role="app-shell"] .control-square {
+  width: var(--control-height);
+  min-width: var(--control-height);
+  height: var(--control-height);
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border-radius: 0;
+}
+
+[data-role="app-shell"] .tool-spec-slider {
+  height: 1px;
+  min-height: 1px;
+}
+
+[data-role="app-shell"] .tool-spec-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 0;
+  background: rgba(250, 250, 250, 0.85);
+  cursor: pointer;
+}
+
+[data-role="app-shell"] .tool-spec-slider::-moz-range-thumb {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 0;
+  border: none;
+  background: rgba(250, 250, 250, 0.85);
+  cursor: pointer;
+}
+
 .dark select {
   background-color: #0a0a0a;
   color: #fafafa;

@@ -38,6 +38,7 @@ export interface NodeData {
   strokePoints?: { x: number; y: number }[];
   strokeWidth?: number;
   strokeColor?: string;
+  strokeShape?: "round" | "square" | "triangle";
 }
 
 interface WorldNodeProps {
@@ -51,6 +52,7 @@ interface WorldNodeProps {
   onResize?: (node: NodeData, size: { width: number; height: number }) => void;
   zoomScale: number;
   zIndex?: number;
+  disableInteraction?: boolean;
 }
 
 export function WorldNode({
@@ -63,6 +65,7 @@ export function WorldNode({
   onResize,
   zoomScale,
   zIndex,
+  disableInteraction = false,
 }: WorldNodeProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isEditingText, setIsEditingText] = useState(false);
@@ -216,7 +219,7 @@ export function WorldNode({
 
   return (
     <motion.div
-      className="absolute cursor-pointer"
+      className={`absolute ${disableInteraction ? "pointer-events-none" : "cursor-pointer"}`}
       style={{
         left: node.x,
         top: node.y,
@@ -335,8 +338,8 @@ export function WorldNode({
               fill="none"
               stroke={node.strokeColor ?? "#fafafa"}
               strokeWidth={node.strokeWidth ?? 6}
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              strokeLinecap={node.strokeShape === "round" ? "round" : "butt"}
+              strokeLinejoin={node.strokeShape === "triangle" ? "bevel" : node.strokeShape === "square" ? "miter" : "round"}
               vectorEffect="non-scaling-stroke"
             />
           </svg>
@@ -355,8 +358,8 @@ export function WorldNode({
         )}
 
         {(isHovered || isSelected) && (
-          <div className="absolute top-2 left-2 max-w-[70%] px-2 py-1 bg-black/60 border border-white/15">
-            <p className="text-white text-[10px] font-light truncate">{node.title || "Untitled"}</p>
+          <div className="absolute top-1 left-1 max-w-[70%] px-1.5 py-0.5 bg-black/60 border border-white/15">
+            <p className="text-white text-[8px] font-light truncate leading-tight">{node.title || "Untitled"}</p>
           </div>
         )}
 

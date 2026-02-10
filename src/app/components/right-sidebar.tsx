@@ -122,6 +122,17 @@ const fetchGoogleFontFamilies = async (): Promise<string[]> => {
 
 interface RightSidebarProps {
   selectedNode: NodeData | null;
+  activeTool: "select" | "brush" | "eraser";
+  brushSpec: { size: number; opacity: number; shape: "round" | "square" | "triangle" };
+  eraserSpec: { size: number; opacity: number; shape: "round" | "square" | "triangle" };
+  brushColor: string;
+  onBrushSizeChange: (size: number) => void;
+  onBrushOpacityChange: (opacity: number) => void;
+  onBrushShapeChange: (shape: "round" | "square" | "triangle") => void;
+  onBrushColorChange: (color: string) => void;
+  onEraserSizeChange: (size: number) => void;
+  onEraserOpacityChange: (opacity: number) => void;
+  onEraserShapeChange: (shape: "round" | "square" | "triangle") => void;
   onUpdateNode: (id: string, updates: Partial<NodeData>) => void;
   onDeleteNode: () => void;
   onDuplicateNode: () => void;
@@ -132,6 +143,17 @@ interface RightSidebarProps {
 
 export function RightSidebar({
   selectedNode,
+  activeTool,
+  brushSpec,
+  eraserSpec,
+  brushColor,
+  onBrushSizeChange,
+  onBrushOpacityChange,
+  onBrushShapeChange,
+  onBrushColorChange,
+  onEraserSizeChange,
+  onEraserOpacityChange,
+  onEraserShapeChange,
   onUpdateNode,
   onDeleteNode,
   onDuplicateNode,
@@ -139,6 +161,99 @@ export function RightSidebar({
   onUpdateOpacity,
   onImportFile,
 }: RightSidebarProps) {
+  if (activeTool === "brush" || activeTool === "eraser") {
+    const spec = activeTool === "brush" ? brushSpec : eraserSpec;
+    const isBrush = activeTool === "brush";
+    return (
+      <div className="w-full lg:w-80 h-full bg-[#0a0a0a] border-l border-white/5 flex flex-col overflow-hidden">
+        <div className="px-6 py-4 border-b border-white/5">
+          <div className="text-[10px] text-[#737373] uppercase tracking-wider mb-2">Tool Specs</div>
+          <div className="text-[#fafafa] text-sm font-light uppercase tracking-wider">{activeTool}</div>
+        </div>
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="p-6 space-y-5">
+            <div>
+              <div className="mb-2 flex items-center justify-between text-xs">
+                <span className="text-[#737373] uppercase tracking-wider">Size</span>
+                <span className="text-[#fafafa] tabular-nums">{Math.round(spec.size)} px</span>
+              </div>
+              <input
+                type="range"
+                min={isBrush ? 1 : 2}
+                max={isBrush ? 64 : 72}
+                value={Math.round(spec.size)}
+                onChange={(event) => {
+                  const value = Number(event.target.value);
+                  if (isBrush) onBrushSizeChange(value);
+                  else onEraserSizeChange(value);
+                }}
+                className="tool-spec-slider w-full h-px bg-white/10 appearance-none cursor-pointer"
+              />
+            </div>
+            <div>
+              <div className="mb-2 flex items-center justify-between text-xs">
+                <span className="text-[#737373] uppercase tracking-wider">Opacity</span>
+                <span className="text-[#fafafa] tabular-nums">{Math.round(spec.opacity * 100)}%</span>
+              </div>
+              <input
+                type="range"
+                min="5"
+                max="100"
+                value={Math.round(spec.opacity * 100)}
+                onChange={(event) => {
+                  const value = Math.max(0.05, Math.min(1, Number(event.target.value) / 100));
+                  if (isBrush) onBrushOpacityChange(value);
+                  else onEraserOpacityChange(value);
+                }}
+                className="tool-spec-slider w-full h-px bg-white/10 appearance-none cursor-pointer"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-[#737373] mb-1.5 block font-light">Shape</label>
+              <select
+                value={spec.shape}
+                onChange={(event) => {
+                  const value = event.target.value as "round" | "square" | "triangle";
+                  if (isBrush) onBrushShapeChange(value);
+                  else onEraserShapeChange(value);
+                }}
+                className="control-pill w-full bg-[#0a0a0a] border border-white/10 text-[#fafafa] px-3 py-2 rounded-none text-sm font-light text-center [text-align-last:center] focus:border-white/20 focus:outline-none transition-colors"
+              >
+                <option className="bg-[#0a0a0a]" value="round">Round</option>
+                <option className="bg-[#0a0a0a]" value="square">Square</option>
+                <option className="bg-[#0a0a0a]" value="triangle">Triangle</option>
+              </select>
+            </div>
+            {isBrush && (
+              <div>
+                <label className="text-xs text-[#737373] mb-1.5 block font-light">Color</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={brushColor}
+                    onChange={(event) => onBrushColorChange(event.target.value)}
+                    className="control-square h-8 w-8 rounded-none border border-white/10 bg-transparent p-0.5 cursor-pointer"
+                    aria-label="Brush color"
+                  />
+                  <input
+                    type="text"
+                    value={brushColor}
+                    onChange={(event) => onBrushColorChange(event.target.value)}
+                    className="control-pill flex-1 bg-transparent border border-white/10 text-[#fafafa] px-3 py-2 rounded-none text-sm font-light focus:border-white/20 focus:outline-none transition-colors"
+                    aria-label="Brush color hex"
+                  />
+                </div>
+              </div>
+            )}
+            <div className="text-[10px] uppercase tracking-wider text-[#737373]">
+              Right-click canvas to access quick tool menu
+            </div>
+          </div>
+        </ScrollArea>
+      </div>
+    );
+  }
+
   if (!selectedNode) {
     return (
       <div className="w-full lg:w-80 h-full bg-[#0a0a0a] border-l border-white/5 flex items-center justify-center">
@@ -500,7 +615,7 @@ export function RightSidebar({
                     setInvertColors(next);
                     onUpdateNode(selectedNode.id, { invertColors: next });
                   }}
-                  className={`h-7 px-2 rounded-none border text-[10px] uppercase tracking-wider transition-colors ${
+                  className={`control-square h-7 w-7 rounded-none border text-[9px] uppercase tracking-wider transition-colors ${
                     invertColors
                       ? "border-white/30 text-[#fafafa] bg-white/10"
                       : "border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20"

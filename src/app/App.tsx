@@ -3,7 +3,7 @@ import { LeftSidebar } from "./components/left-sidebar";
 import { RightSidebar } from "./components/right-sidebar";
 import { WorldCanvas } from "./components/world-canvas";
 import { NodeData } from "./components/world-node";
-import { Play, Plus, ZoomIn, RotateCcw, RotateCw, Printer, Upload, Info, Frame, Download, Crop, Link2, PanelLeft, SlidersHorizontal, X, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, ZoomIn, RotateCcw, RotateCw, Printer, Upload, Info, Frame, Download, Crop, Link2, PanelLeft, SlidersHorizontal, X, ChevronUp, ChevronDown } from "lucide-react";
 
 const STORAGE_KEY = "fanzinator:canvas-editor:v2";
 const RESET_KEY = "fanzinator:force-reset:v1";
@@ -34,6 +34,7 @@ type Snapshot = {
 };
 
 type ExportFormat = "png" | "jpeg" | "webp" | "svg" | "ico";
+type FinalPassMode = "none" | "threshold" | "bitmap" | "posterize" | "duotone";
 type VisualPreset = "zine" | "acid" | "retro" | "mono" | "neon" | "paper";
 type FilterOp =
   | { kind: "grayscale"; value: number }
@@ -43,11 +44,18 @@ type FilterOp =
   | { kind: "sepia"; value: number }
   | { kind: "hueRotate"; value: number };
 
+const nextAutoCanvasName = (existingNames: Iterable<string>) => {
+  const normalized = new Set(Array.from(existingNames, (name) => name.trim().toLowerCase()));
+  let index = 1;
+  while (normalized.has(`canvas${index}`)) index += 1;
+  return `canvas${index}`;
+};
+
 
 const initialCanvases: Canvas[] = [
   {
     id: "canvas-1",
-    name: "New Canvas",
+    name: "canvas1",
     nodes: [],
     snapEnabled: true,
     gridSize: 20,
@@ -291,6 +299,75 @@ const applyFilterOpsToCanvas = (
   ctx.putImageData(next, 0, 0);
 };
 
+const applyFinalPassToCanvas = (
+  canvas: HTMLCanvasElement,
+  mode: FinalPassMode,
+  amount: number
+) => {
+  if (mode === "none") return;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const intensity = Math.max(0, Math.min(1, amount));
+
+  if (mode === "bitmap") {
+    const step = Math.max(2, Math.round(2 + intensity * 18));
+    const w = Math.max(1, Math.round(canvas.width / step));
+    const h = Math.max(1, Math.round(canvas.height / step));
+    const tiny = document.createElement("canvas");
+    tiny.width = w;
+    tiny.height = h;
+    const tinyCtx = tiny.getContext("2d");
+    if (!tinyCtx) return;
+    tinyCtx.imageSmoothingEnabled = true;
+    tinyCtx.drawImage(canvas, 0, 0, w, h);
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(tiny, 0, 0, canvas.width, canvas.height);
+    ctx.restore();
+  }
+
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = imageData.data;
+  const thresholdCutoff = Math.round(64 + intensity * 150);
+  const levels = Math.max(2, Math.round(2 + intensity * 8));
+  const light = { r: 244, g: 242, b: 231 };
+  const dark = { r: 17, g: 17, b: 17 };
+
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] === 0) continue;
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+    const y = Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b);
+
+    if (mode === "threshold" || mode === "bitmap") {
+      const v = y >= thresholdCutoff ? 255 : 0;
+      data[i] = v;
+      data[i + 1] = v;
+      data[i + 2] = v;
+      continue;
+    }
+
+    if (mode === "posterize") {
+      const step = 255 / (levels - 1);
+      data[i] = Math.round(Math.round(r / step) * step);
+      data[i + 1] = Math.round(Math.round(g / step) * step);
+      data[i + 2] = Math.round(Math.round(b / step) * step);
+      continue;
+    }
+
+    if (mode === "duotone") {
+      const t = y / 255;
+      data[i] = Math.round(dark.r + (light.r - dark.r) * t);
+      data[i + 1] = Math.round(dark.g + (light.g - dark.g) * t);
+      data[i + 2] = Math.round(dark.b + (light.b - dark.b) * t);
+    }
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+};
+
 export default function App() {
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
   const [canvases, setCanvases] = useState<Canvas[]>(initialCanvases);
@@ -322,6 +399,8 @@ export default function App() {
   const [exportAutoScale, setExportAutoScale] = useState(true);
   const [exportQuality, setExportQuality] = useState(0.92);
   const [exportIncludeFilters, setExportIncludeFilters] = useState(true);
+  const [exportFinalPass, setExportFinalPass] = useState<FinalPassMode>("none");
+  const [exportFinalPassAmount, setExportFinalPassAmount] = useState(0.65);
   const [exportPreviewUrl, setExportPreviewUrl] = useState<string>("");
   const [isExportPreviewLoading, setIsExportPreviewLoading] = useState(false);
   const [exportEstimatedBytes, setExportEstimatedBytes] = useState<number | null>(null);
@@ -332,7 +411,16 @@ export default function App() {
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [showMobileLeftSidebar, setShowMobileLeftSidebar] = useState(false);
   const [showMobileRightSidebar, setShowMobileRightSidebar] = useState(false);
-  const [activeTool, setActiveTool] = useState<"brush" | "eraser">("brush");
+  const [activeTool, setActiveTool] = useState<"select" | "brush" | "eraser">("select");
+  const [historyLog, setHistoryLog] = useState<string[]>([]);
+  const [brushPreset, setBrushPreset] = useState<"ink" | "marker" | "chalk">("marker");
+  const [brushShape, setBrushShape] = useState<"round" | "square" | "triangle">("round");
+  const [brushSize, setBrushSize] = useState(6);
+  const [brushColor, setBrushColor] = useState("#fafafa");
+  const [brushOpacity, setBrushOpacity] = useState(1);
+  const [eraserSize, setEraserSize] = useState(12);
+  const [eraserFormat, setEraserFormat] = useState<"round" | "square" | "triangle">("round");
+  const [eraserOpacity, setEraserOpacity] = useState(1);
   const dragDepthRef = useRef(0);
   const exportAspectRatioRef = useRef(1200 / 800);
   const exportPreviewDragRef = useRef<{
@@ -374,7 +462,7 @@ export default function App() {
     if (needsReset) {
       const freshCanvas: Canvas = {
         id: `canvas-${Date.now()}`,
-        name: "New Canvas",
+        name: "canvas1",
         nodes: [],
         snapEnabled: true,
         gridSize: 20,
@@ -411,22 +499,31 @@ export default function App() {
           "Client Work",
           "Archive",
         ]);
+        const existingNames = new Set<string>();
         const normalized = storedCanvases
           .filter((canvas) => !placeholderNames.has(canvas.name))
-          .map((canvas) => ({
-          ...canvas,
-          name:
-            canvas.name === "New Canvas" || canvas.name === "Untitled" ? "" : canvas.name,
-          backgroundColor: canvas.backgroundColor ?? "#0a0a0a",
-          printOrientation: canvas.printOrientation ?? "portrait",
-        }));
+          .map((canvas) => {
+            const raw = (canvas.name ?? "").trim();
+            const baseName =
+              raw === "" || raw === "New Canvas" || raw === "Untitled"
+                ? nextAutoCanvasName(existingNames)
+                : raw;
+            const finalName = uniqueCanvasName(baseName, existingNames);
+            existingNames.add(finalName);
+            return {
+              ...canvas,
+              name: finalName,
+              backgroundColor: canvas.backgroundColor ?? "#0a0a0a",
+              printOrientation: canvas.printOrientation ?? "portrait",
+            };
+          });
         if (normalized.length > 0) {
           setCanvases(normalized);
           setCurrentCanvasId(storedCurrentId || normalized[0].id);
         } else {
           const freshCanvas: Canvas = {
             id: `canvas-${Date.now()}`,
-            name: "",
+            name: "canvas1",
             nodes: [],
             snapEnabled: true,
             gridSize: 20,
@@ -446,7 +543,7 @@ export default function App() {
       if (!storedCanvases || storedCanvases.length === 0) {
         const freshCanvas: Canvas = {
           id: `canvas-${Date.now()}`,
-          name: "",
+          name: "canvas1",
           nodes: [],
           snapEnabled: true,
           gridSize: 20,
@@ -492,13 +589,17 @@ export default function App() {
   const cloneSnapshot = (snapshot: Snapshot): Snapshot =>
     JSON.parse(JSON.stringify(snapshot)) as Snapshot;
 
-  const recordHistory = () => {
+  const recordHistory = (label = "Edit") => {
     const snapshot = cloneSnapshot({ canvases, currentCanvasId });
     setHistoryPast((prev) => {
       const next = [...prev, snapshot];
       return next.slice(-HISTORY_LIMIT);
     });
     setHistoryFuture([]);
+    setHistoryLog((prev) => {
+      const stamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      return [`${stamp} ${label}`, ...prev].slice(0, 25);
+    });
   };
 
   const currentCanvas = canvases.find((canvas) => canvas.id === currentCanvasId) ?? null;
@@ -539,6 +640,32 @@ export default function App() {
           : canvas
       )
     );
+  };
+
+  const createStrokeNodeLive = (node: NodeData) => {
+    setCanvases((prev) =>
+      prev.map((canvas) =>
+        canvas.id === currentCanvasId
+          ? {
+              ...canvas,
+              nodes: [...canvas.nodes, node],
+            }
+          : canvas
+      )
+    );
+    setSelectedNodeIds([node.id]);
+  };
+
+  const deleteNodesLive = (ids: string[]) => {
+    if (ids.length === 0) return;
+    setCanvases((prev) =>
+      prev.map((canvas) =>
+        canvas.id === currentCanvasId
+          ? { ...canvas, nodes: canvas.nodes.filter((node) => !ids.includes(node.id)) }
+          : canvas
+      )
+    );
+    setSelectedNodeIds((prev) => prev.filter((id) => !ids.includes(id)));
   };
 
   const handleAddTextLayer = () => {
@@ -857,10 +984,12 @@ export default function App() {
     switch (node.type) {
       case "video":
         return { width: 224, height: 128 };
-            case "interactive":
+      case "interactive":
         return { width: 176, height: 176 };
       case "text":
         return { width: 220, height: 96 };
+      case "stroke":
+        return { width: node.width ?? 1, height: node.height ?? 1 };
       default:
         return { width: 192, height: 192 };
     }
@@ -991,6 +1120,12 @@ export default function App() {
     exportPreviewDragRef.current = null;
   };
 
+  const handleExportPreviewDoubleClick = (event: React.MouseEvent<HTMLDivElement | HTMLImageElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    resetExportPreviewTransform();
+  };
+
   const readImage = (src: string): Promise<HTMLImageElement> =>
     new Promise((resolve, reject) => {
       const image = new Image();
@@ -1096,7 +1231,21 @@ export default function App() {
       ]);
       const nodeFilterAttr = nodeFilter !== "none" ? ` style="filter:${escapeXml(nodeFilter)}"` : "";
       parts.push(`<g opacity="${opacity}" transform="rotate(${rotation} ${cx} ${cy})"${nodeFilterAttr}>`);
-      if (node.type === "text") {
+      if (node.type === "stroke" && (node.strokePoints?.length ?? 0) > 1) {
+        const strokePoints =
+          node.strokePoints
+            ?.map((point) => `${x + point.x * scaleX},${y + point.y * scaleY}`)
+            .join(" ") ?? "";
+        parts.push(
+          `<polyline points="${strokePoints}" fill="none" stroke="${escapeXml(
+            node.strokeColor ?? "#fafafa"
+          )}" stroke-width="${Math.max(1, (node.strokeWidth ?? 6) * Math.min(scaleX, scaleY))}" stroke-linecap="${
+            node.strokeShape === "round" ? "round" : "butt"
+          }" stroke-linejoin="${
+            node.strokeShape === "triangle" ? "bevel" : node.strokeShape === "square" ? "miter" : "round"
+          }" />`
+        );
+      } else if (node.type === "text") {
         const textStyle = node.textStyle ?? {};
         const align = textStyle.align ?? "center";
         const textAnchor = align === "left" ? "start" : align === "right" ? "end" : "middle";
@@ -1113,7 +1262,7 @@ export default function App() {
             textStyle.underline ? "underline" : "none"
           }">${escapeXml(node.title || "Text")}</text>`
         );
-      } else {
+      } else if (node.type !== "stroke") {
         const imageSrc = node.mediaUrl || node.thumbnail || "";
         const isImage =
           (node.mediaUrl?.startsWith("data:image/") ||
@@ -1212,7 +1361,21 @@ export default function App() {
       ctx.translate(cx, cy);
       ctx.rotate(((node.rotation ?? 0) * Math.PI) / 180);
       ctx.translate(-cx, -cy);
-      if (node.type === "text") {
+      if (node.type === "stroke" && (node.strokePoints?.length ?? 0) > 1) {
+        ctx.strokeStyle = node.strokeColor ?? "#fafafa";
+        ctx.lineWidth = Math.max(1, (node.strokeWidth ?? 6) * Math.min(scaleX, scaleY));
+        ctx.lineCap = node.strokeShape === "round" ? "round" : "butt";
+        ctx.lineJoin = node.strokeShape === "triangle" ? "bevel" : node.strokeShape === "square" ? "miter" : "round";
+        ctx.beginPath();
+        const first = node.strokePoints?.[0];
+        if (first) {
+          ctx.moveTo(x + first.x * scaleX, y + first.y * scaleY);
+          node.strokePoints?.slice(1).forEach((point) => {
+            ctx.lineTo(x + point.x * scaleX, y + point.y * scaleY);
+          });
+          ctx.stroke();
+        }
+      } else if (node.type === "text") {
         const nodeOps = includeFilters ? resolveNodePresetOps(node.preset) : [];
         const textStyle = node.textStyle ?? {};
         const fontSize = Math.max(10, Math.min(512, textStyle.fontSize ?? 14)) * Math.min(scaleX, scaleY);
@@ -1240,7 +1403,7 @@ export default function App() {
         }
         applyFilterOpsToCanvas(nodeCanvas, nodeOps, includeFilters && Boolean(node.invertColors));
         ctx.drawImage(nodeCanvas, x, y, w, h);
-      } else {
+      } else if (node.type !== "stroke") {
         const nodeOps = includeFilters ? resolveNodePresetOps(node.preset) : [];
         const src = node.mediaUrl || node.thumbnail || "";
         const isImage =
@@ -1314,6 +1477,9 @@ export default function App() {
     const fileBase = (currentCanvas.name || "canvas").trim().toLowerCase().replace(/\s+/g, "-") || "canvas";
 
     if (exportFormat === "svg") {
+      if (exportFinalPass !== "none") {
+        window.alert("Final pass is not applied to SVG exports.");
+      }
       const svgMarkup = buildExportSvgMarkup(nodes, bounds, renderWidth, renderHeight, {
         includeFilters: exportIncludeFilters,
       });
@@ -1333,6 +1499,7 @@ export default function App() {
     const canvas = await renderExportCanvas(nodes, bounds, renderWidth, renderHeight, {
       includeFilters: exportIncludeFilters,
     });
+    applyFinalPassToCanvas(canvas, exportFinalPass, exportFinalPassAmount);
 
     const mimeType =
       exportFormat === "jpeg"
@@ -1446,6 +1613,7 @@ export default function App() {
           const canvas = await renderExportCanvas(nodes, bounds, previewWidth, previewHeight, {
             includeFilters: exportIncludeFilters,
           });
+          applyFinalPassToCanvas(canvas, exportFinalPass, exportFinalPassAmount);
           const blob = await blobFromCanvas(canvas, "image/png");
           const previewPixels = Math.max(1, previewWidth * previewHeight);
           const fullPixels = Math.max(1, fullWidth * fullHeight);
@@ -1484,6 +1652,8 @@ export default function App() {
     exportScale,
     exportQuality,
     exportIncludeFilters,
+    exportFinalPass,
+    exportFinalPassAmount,
     printFrame.enabled,
     printFrame.x,
     printFrame.y,
@@ -1538,15 +1708,19 @@ export default function App() {
 
 
   const uniqueCanvasName = (base: string, existingNames: Set<string>) => {
-    if (!existingNames.has(base)) return base;
+    const trimmed = base.trim();
+    if (!trimmed) return nextAutoCanvasName(existingNames);
+    const normalized = new Set(Array.from(existingNames, (name) => name.trim().toLowerCase()));
+    if (!normalized.has(trimmed.toLowerCase())) return trimmed;
     let index = 2;
-    while (existingNames.has(`${base} ${index}`)) index += 1;
-    return `${base} ${index}`;
+    while (normalized.has(`${trimmed} ${index}`.toLowerCase())) index += 1;
+    return `${trimmed} ${index}`;
   };
 
   const handleCreateCanvas = () => {
     recordHistory();
-    const name = uniqueCanvasName("New Canvas", new Set(canvases.map((canvas) => canvas.name)));
+    const existing = new Set(canvases.map((canvas) => canvas.name));
+    const name = uniqueCanvasName(nextAutoCanvasName(existing), existing);
     const canvas: Canvas = {
       id: `canvas-${Date.now()}`,
       name,
@@ -1568,11 +1742,15 @@ export default function App() {
   const handleRenameCanvas = (nextName: string) => {
     const target = currentCanvas;
     const cleanName = nextName.trim();
-    if (!target || !cleanName || cleanName === target.name) return;
+    if (!target) return;
     const existingNames = new Set(
       canvases.filter((canvas) => canvas.id !== target.id).map((canvas) => canvas.name)
     );
-    const uniqueName = uniqueCanvasName(cleanName, existingNames);
+    const uniqueName = uniqueCanvasName(
+      cleanName || nextAutoCanvasName(existingNames),
+      existingNames
+    );
+    if (uniqueName === target.name) return;
     recordHistory();
     setCanvases((prev) =>
       prev.map((canvas) =>
@@ -1659,6 +1837,26 @@ export default function App() {
     setSelectedNodeIds([]);
   };
 
+  const handleNudgeSelectedNodes = (dx: number, dy: number) => {
+    if (!currentCanvas || selectedNodeIds.length === 0) return;
+    recordHistory();
+    const selectedSet = new Set(selectedNodeIds);
+    setCanvases((prev) =>
+      prev.map((canvas) =>
+        canvas.id === currentCanvasId
+          ? {
+              ...canvas,
+              nodes: canvas.nodes.map((node) =>
+                selectedSet.has(node.id)
+                  ? { ...node, x: node.x + dx, y: node.y + dy }
+                  : node
+              ),
+            }
+          : canvas
+      )
+    );
+  };
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -1693,6 +1891,16 @@ export default function App() {
         handleAddNode();
         return;
       }
+      if (event.key.startsWith("Arrow")) {
+        if (selectedNodeIds.length === 0) return;
+        event.preventDefault();
+        const step = event.shiftKey ? 10 : 1;
+        if (event.key === "ArrowUp") handleNudgeSelectedNodes(0, -step);
+        if (event.key === "ArrowDown") handleNudgeSelectedNodes(0, step);
+        if (event.key === "ArrowLeft") handleNudgeSelectedNodes(-step, 0);
+        if (event.key === "ArrowRight") handleNudgeSelectedNodes(step, 0);
+        return;
+      }
       if (event.key === "Escape") {
         handleClearSelection();
         return;
@@ -1711,9 +1919,11 @@ export default function App() {
     handleUndo,
     handleRedo,
     handleAddNode,
+    handleNudgeSelectedNodes,
     handleDuplicateNodes,
     handleDeleteNodes,
     handleClearSelection,
+    currentCanvas,
   ]);
 
   const filteredNodes = useMemo(() => {
@@ -1733,6 +1943,7 @@ export default function App() {
 
   return (
     <div 
+      data-role="app-shell"
       data-printing={isPrinting ? "true" : "false"}
       className="h-[100dvh] w-full flex flex-col dark overflow-hidden bg-[#0a0a0a]"
       onDragEnter={(event) => {
@@ -1808,7 +2019,7 @@ export default function App() {
           </div>
         </div>
         <div className="w-full lg:w-auto overflow-x-auto">
-          <div className="flex items-center gap-2 lg:gap-3 text-xs text-[#737373] min-w-max pb-1 lg:pb-0">
+          <div className="grid grid-rows-2 grid-flow-col auto-cols-max gap-2 lg:gap-3 text-xs text-[#737373] w-max pb-1 lg:pb-0">
           <button
             onClick={handleUndo}
             disabled={historyPast.length === 0}
@@ -1825,16 +2036,10 @@ export default function App() {
           >
             <RotateCw className="w-3.5 h-3.5" />
           </button>
-          <button
-            onClick={handleTogglePlay}
-            className={`h-10 px-3 rounded-none border text-[10px] uppercase tracking-wider transition-colors ${
-              isPlaying
-                ? "border-white/20 text-[#fafafa] bg-white/5"
-                : "border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20"
-            }`}
-          >
-            <Play className="w-3 h-3" />
-          </button>
+          <div className="control-pill h-10 px-3 border border-white/10 text-[10px] uppercase tracking-wider text-[#737373] flex items-center">
+            Back {historyPast.length} | Fwd {historyFuture.length}
+            {historyLog[0] ? ` | ${historyLog[0]}` : ""}
+          </div>
           <label className="h-10 px-3 rounded-none border border-white/10 text-[10px] uppercase tracking-wider text-[#737373] hover:text-[#fafafa] hover:border-white/20 transition-colors flex items-center gap-1.5 cursor-pointer">
             <Upload className="w-3 h-3" />
             Import
@@ -1924,15 +2129,6 @@ export default function App() {
             Download
           </button>
           <button
-            onClick={() => {
-              void handleShareVisibleCanvasImageLink();
-            }}
-            className="h-10 px-3 rounded-none border border-white/10 text-[10px] uppercase tracking-wider text-[#737373] hover:text-[#fafafa] hover:border-white/20 transition-colors flex items-center gap-1.5"
-          >
-            <Link2 className="w-3 h-3" />
-            Share Image Link
-          </button>
-          <button
             onClick={() => setShowPrintArea((prev) => !prev)}
             className={`h-10 w-[156px] px-3 rounded-none border text-[10px] uppercase tracking-wider transition-colors ${
               showPrintArea
@@ -1944,6 +2140,15 @@ export default function App() {
               <Frame className="w-3 h-3" />
               {showPrintArea ? "Hide Print Area" : "Show Print Area"}
             </span>
+          </button>
+          <button
+            onClick={() => {
+              void handleShareVisibleCanvasImageLink();
+            }}
+            className="h-10 px-3 rounded-none border border-white/10 text-[10px] uppercase tracking-wider text-[#737373] hover:text-[#fafafa] hover:border-white/20 transition-colors flex items-center gap-1.5"
+          >
+            <Link2 className="w-3 h-3" />
+            Share Image Link
           </button>
           <button
             onClick={handlePrintCanvas}
@@ -1989,12 +2194,14 @@ export default function App() {
             onToggleLayerVisibility={(id, nextVisible) =>
               updateNode(id, { visible: nextVisible })
             }
+            onDeleteLayer={(id) => handleDeleteNodes([id])}
             canvasBackground={currentCanvas?.backgroundColor ?? "#0a0a0a"}
             onCanvasBackgroundChange={updateCanvasBackground}
             canvasPreset={currentCanvas?.canvasPreset ?? "none"}
             onCanvasPresetChange={updateCanvasPreset}
             selectedLayerId={selectedNodeIds[0] ?? ""}
             onSelectLayer={(id) => setSelectedNodeIds([id])}
+            onRenameLayer={(id, nextTitle) => updateNode(id, { title: nextTitle })}
             onCreateCanvas={handleCreateCanvas}
             onRenameCanvas={handleRenameCanvas}
             onDeleteCanvas={handleDeleteCanvas}
@@ -2005,7 +2212,7 @@ export default function App() {
         )}
 
         {/* Center Canvas */}
-        <div className="flex-1 min-w-0 flex flex-col">
+        <div className="flex-1 min-w-0 flex flex-col relative">
           <div className="flex-1 min-h-0">
                 {currentCanvas ? (
                   <WorldCanvas
@@ -2024,11 +2231,34 @@ export default function App() {
                     onResizeStart={recordHistory}
                     onResize={(id, size) => updateNodeLive(id, size)}
                     onUpdateNode={updateNode}
+                    onUpdateNodeLive={updateNodeLive}
+                    onCreateStroke={createStrokeNodeLive}
+                    onDeleteNodesLive={deleteNodesLive}
+                    onStrokeActionStart={recordHistory}
+                    activeTool={activeTool}
+                    brushPreset={brushPreset}
+                    brushShape={brushShape}
+                    brushSize={brushSize}
+                    brushColor={brushColor}
+                    brushOpacity={brushOpacity}
+                    onBrushPresetChange={setBrushPreset}
+                    onBrushShapeChange={setBrushShape}
+                    onBrushSizeChange={setBrushSize}
+                    onBrushColorChange={setBrushColor}
+                    onBrushOpacityChange={setBrushOpacity}
+                    eraserSize={eraserSize}
+                    eraserFormat={eraserFormat}
+                    eraserOpacity={eraserOpacity}
+                    onEraserSizeChange={setEraserSize}
+                    onEraserFormatChange={setEraserFormat}
+                    onEraserOpacityChange={setEraserOpacity}
                     printFrame={printFrame}
                     onPrintFrameChange={setPrintFrame}
                     defaultPrintArea={activePrintArea}
                     printOrientation={currentCanvas.printOrientation}
                     onTogglePrintOrientation={toggleCanvasPrintOrientation}
+                    isFullscreen={isPlaying}
+                    onToggleFullscreen={handleTogglePlay}
                     showPrintArea={showPrintArea}
                     canvasPreset={currentCanvas.canvasPreset}
                     backgroundColor={currentCanvas.backgroundColor}
@@ -2119,6 +2349,17 @@ export default function App() {
         <div className="print-hide hidden lg:block flex-shrink-0 h-full min-h-0 basis-[20rem] min-w-[20rem] max-w-[20rem] overflow-hidden">
           <RightSidebar
             selectedNode={selectedNode}
+            activeTool={activeTool}
+            brushSpec={{ size: brushSize, opacity: brushOpacity, shape: brushShape }}
+            eraserSpec={{ size: eraserSize, opacity: eraserOpacity, shape: eraserFormat }}
+            brushColor={brushColor}
+            onBrushSizeChange={setBrushSize}
+            onBrushOpacityChange={setBrushOpacity}
+            onBrushShapeChange={setBrushShape}
+            onBrushColorChange={setBrushColor}
+            onEraserSizeChange={setEraserSize}
+            onEraserOpacityChange={setEraserOpacity}
+            onEraserShapeChange={setEraserFormat}
             onUpdateNode={updateNode}
             onDeleteNode={() => handleDeleteNodes(selectedNodeIds)}
             onDuplicateNode={() => handleDuplicateNodes(selectedNodeIds)}
@@ -2178,12 +2419,14 @@ export default function App() {
                 onToggleLayerVisibility={(id, nextVisible) =>
                   updateNode(id, { visible: nextVisible })
                 }
+                onDeleteLayer={(id) => handleDeleteNodes([id])}
                 canvasBackground={currentCanvas?.backgroundColor ?? "#0a0a0a"}
                 onCanvasBackgroundChange={updateCanvasBackground}
                 canvasPreset={currentCanvas?.canvasPreset ?? "none"}
                 onCanvasPresetChange={updateCanvasPreset}
                 selectedLayerId={selectedNodeIds[0] ?? ""}
                 onSelectLayer={(id) => setSelectedNodeIds([id])}
+                onRenameLayer={(id, nextTitle) => updateNode(id, { title: nextTitle })}
                 onCreateCanvas={handleCreateCanvas}
                 onRenameCanvas={handleRenameCanvas}
                 onDeleteCanvas={handleDeleteCanvas}
@@ -2218,6 +2461,17 @@ export default function App() {
             <div className="flex-1 min-h-0">
               <RightSidebar
                 selectedNode={selectedNode}
+                activeTool={activeTool}
+                brushSpec={{ size: brushSize, opacity: brushOpacity, shape: brushShape }}
+                eraserSpec={{ size: eraserSize, opacity: eraserOpacity, shape: eraserFormat }}
+                brushColor={brushColor}
+                onBrushSizeChange={setBrushSize}
+                onBrushOpacityChange={setBrushOpacity}
+                onBrushShapeChange={setBrushShape}
+                onBrushColorChange={setBrushColor}
+                onEraserSizeChange={setEraserSize}
+                onEraserOpacityChange={setEraserOpacity}
+                onEraserShapeChange={setEraserFormat}
                 onUpdateNode={updateNode}
                 onDeleteNode={() => handleDeleteNodes(selectedNodeIds)}
                 onDuplicateNode={() => handleDuplicateNodes(selectedNodeIds)}
@@ -2323,7 +2577,7 @@ export default function App() {
                   onMouseMove={handleExportPreviewMouseMove}
                   onMouseUp={handleExportPreviewMouseUp}
                   onMouseLeave={handleExportPreviewMouseUp}
-                  onDoubleClick={resetExportPreviewTransform}
+                  onDoubleClick={handleExportPreviewDoubleClick}
                 >
                   {isExportPreviewLoading ? (
                     <div className="w-full h-full flex items-center justify-center text-xs text-[#737373]">
@@ -2342,12 +2596,14 @@ export default function App() {
                         transform: `translate(${exportPreviewPan.x}px, ${exportPreviewPan.y}px) scale(${exportPreviewZoom})`,
                         transformOrigin: "center center",
                       }}
+                      onDoubleClick={handleExportPreviewDoubleClick}
                     >
                       <img
                         src={exportPreviewUrl}
                         alt="Export preview"
                         draggable={false}
                         className="max-w-full max-h-full object-contain select-none"
+                        onDoubleClick={handleExportPreviewDoubleClick}
                       />
                     </div>
                   ) : (
@@ -2464,7 +2720,7 @@ export default function App() {
                   <button
                     type="button"
                     onClick={handleToggleExportAutoScale}
-                    className={`h-7 px-2 rounded-none border text-[10px] uppercase tracking-wider transition-colors ${
+                    className={`control-square h-7 w-7 rounded-none border text-[9px] uppercase tracking-wider transition-colors ${
                       exportAutoScale
                         ? "border-white/30 text-[#fafafa] bg-white/10"
                         : "border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20"
@@ -2484,7 +2740,7 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setExportIncludeFilters((prev) => !prev)}
-                    className={`h-7 px-2 rounded-none border text-[10px] uppercase tracking-wider transition-colors ${
+                    className={`control-square h-7 w-7 rounded-none border text-[9px] uppercase tracking-wider transition-colors ${
                       exportIncludeFilters
                         ? "border-white/30 text-[#fafafa] bg-white/10"
                         : "border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20"
@@ -2492,6 +2748,50 @@ export default function App() {
                   >
                     {exportIncludeFilters ? "On" : "Off"}
                   </button>
+                </div>
+
+                <div className="border border-white/10 px-3 py-2">
+                  <div className="mb-2 text-xs text-[#fafafa] font-light">Final Pass</div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] text-[#737373] mb-1 block uppercase tracking-wider">Mode</label>
+                      <select
+                        value={exportFinalPass}
+                        onChange={(event) => setExportFinalPass(event.target.value as FinalPassMode)}
+                        className="w-full bg-[#0a0a0a] border border-white/10 text-[#fafafa] px-3 py-2 rounded-none text-sm font-light focus:border-white/20 focus:outline-none transition-colors"
+                      >
+                        <option className="bg-[#0a0a0a]" value="none">None</option>
+                        <option className="bg-[#0a0a0a]" value="threshold">Threshold</option>
+                        <option className="bg-[#0a0a0a]" value="bitmap">Bitmap</option>
+                        <option className="bg-[#0a0a0a]" value="posterize">Posterize</option>
+                        <option className="bg-[#0a0a0a]" value="duotone">Duotone</option>
+                      </select>
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-[10px] text-[#737373] uppercase tracking-wider">Intensity</label>
+                        <span className="text-[10px] text-[#737373] tabular-nums">
+                          {Math.round(exportFinalPassAmount * 100)}%
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={Math.round(exportFinalPassAmount * 100)}
+                        disabled={exportFinalPass === "none"}
+                        onChange={(event) =>
+                          setExportFinalPassAmount(Math.max(0, Math.min(1, Number(event.target.value) / 100)))
+                        }
+                        className="w-full h-0.5 bg-white/10 appearance-none cursor-pointer disabled:opacity-40 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2 [&::-webkit-slider-thumb]:h-2 [&::-webkit-slider-thumb]:bg-white/80 [&::-webkit-slider-thumb]:rounded-none [&::-webkit-slider-thumb]:cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                  {exportFormat === "svg" && exportFinalPass !== "none" && (
+                    <div className="mt-2 text-[10px] text-[#737373] uppercase tracking-wider">
+                      Final pass applies to raster exports (png/jpeg/webp/ico), not svg.
+                    </div>
+                  )}
                 </div>
 
                 {(exportFormat === "jpeg" || exportFormat === "webp") && (
@@ -2545,7 +2845,7 @@ export default function App() {
 
       {showAbout && (
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="w-[560px] max-w-[92vw] bg-[#0a0a0a] border border-white/10 rounded-none p-6">
+          <div className="w-[560px] max-w-[92vw] max-h-[86vh] overflow-y-auto bg-[#0a0a0a] border border-white/10 rounded-none p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="text-sm text-[#fafafa] font-light">Fanzinator - Image + Text Editor</div>
               <button
@@ -2568,8 +2868,16 @@ export default function App() {
                 <div>Add Image or Add Text, drag files onto the canvas to import, and manage layers from the left panel.</div>
               </div>
               <div className="space-y-2">
+                <div className="text-[10px] uppercase tracking-wider text-[#737373]">Tool Specs (Brush + Eraser)</div>
+                <div>Select a stroke layer to paint or erase directly on that layer. If no layer is selected, Brush creates a new stroke layer.</div>
+                <div>Right-click on the canvas while Brush or Eraser is active to open tool settings.</div>
+                <div>Brush settings: preset (Ink, Marker, Chalk), size, and color.</div>
+                <div>Eraser settings: size and format (Round or Square).</div>
+              </div>
+              <div className="space-y-2">
                 <div className="text-[10px] uppercase tracking-wider text-[#737373]">Edit</div>
                 <div>Use Undo/Redo or Cmd/Ctrl+Z and Shift+Cmd/Ctrl+Z, duplicate with Cmd/Ctrl+D, and delete with Delete/Backspace.</div>
+                <div>Pan by dragging empty canvas space, hold Shift and drag for box select, and zoom with mouse wheel.</div>
               </div>
               <div className="space-y-2">
                 <div className="text-[10px] uppercase tracking-wider text-[#737373]">Output</div>
@@ -2616,6 +2924,8 @@ export default function App() {
                     ? { width: 176, height: 176 }
                     : node.type === "text"
                     ? { width: 220, height: 96 }
+                    : node.type === "stroke"
+                    ? { width: Math.max(1, node.width ?? 1), height: Math.max(1, node.height ?? 1) }
                     : { width: 192, height: 192 };
                 const isImage =
                   (node.mediaUrl?.startsWith("data:image/") ||
@@ -2645,7 +2955,26 @@ export default function App() {
                       ]),
                     }}
                   >
-                    {node.type === "text" ? (
+                    {node.type === "stroke" && (node.strokePoints?.length ?? 0) > 1 ? (
+                      <svg
+                        width="100%"
+                        height="100%"
+                        viewBox={`0 0 ${Math.max(1, size.width)} ${Math.max(1, size.height)}`}
+                        preserveAspectRatio="none"
+                      >
+                        <polyline
+                          points={node.strokePoints?.map((point) => `${point.x},${point.y}`).join(" ") ?? ""}
+                          fill="none"
+                          stroke={node.strokeColor ?? "#fafafa"}
+                          strokeWidth={node.strokeWidth ?? 6}
+                          strokeLinecap={node.strokeShape === "round" ? "round" : "butt"}
+                          strokeLinejoin={
+                            node.strokeShape === "triangle" ? "bevel" : node.strokeShape === "square" ? "miter" : "round"
+                          }
+                          vectorEffect="non-scaling-stroke"
+                        />
+                      </svg>
+                    ) : node.type === "text" ? (
                       <div
                         style={{
                           width: "100%",
@@ -2681,7 +3010,7 @@ export default function App() {
                           opacity: 0.8,
                         }}
                       />
-                    ) : (
+                    ) : node.type === "stroke" ? null : (
                       <div
                         style={{
                           width: "100%",
