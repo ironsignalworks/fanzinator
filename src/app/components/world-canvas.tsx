@@ -835,14 +835,6 @@ export function WorldCanvas({
                 setGuideLines({ alignX: null, alignY: null, snapX: null, snapY: null });
               }
               if (dragMoved.current) return;
-              if (
-                event.pointerType !== "mouse" &&
-                selectedNodeIds.length === 1 &&
-                selectedNodeIds[0] === target.id
-              ) {
-                onClearSelection();
-                return;
-              }
               onNodeClick(target);
             }}
           />
