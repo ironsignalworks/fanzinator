@@ -185,7 +185,7 @@ export function LeftSidebar({
               </>
             )}
           </div>
-          <div className="mt-2 grid grid-cols-[minmax(0,1fr)_2.2rem_2.2rem] items-center gap-2 overflow-hidden w-full">
+          <div className="mt-1 grid grid-cols-[minmax(0,1fr)_2.2rem_2.2rem] items-center gap-1 overflow-hidden w-full">
             <button
               onClick={() => {
                 onCreateCanvas();
@@ -261,7 +261,7 @@ export function LeftSidebar({
               <label className="text-[10px] text-[#737373] uppercase tracking-wider block mb-2">
                 Canvas Background
               </label>
-              <div className="grid grid-cols-[2.5rem_minmax(0,1fr)] items-center gap-2 w-full min-w-0 overflow-hidden">
+              <div className="grid grid-cols-[2.5rem_minmax(0,1fr)] items-center gap-1 w-full min-w-0 overflow-hidden">
                 <input
                   type="color"
                   value={canvasBackground}
@@ -280,7 +280,7 @@ export function LeftSidebar({
               <div className="text-[10px] text-[#737373] uppercase tracking-wider font-light mb-2">
                 Tools
               </div>
-              <div className="grid grid-cols-3 gap-2 min-w-0">
+              <div className="grid grid-cols-3 gap-1 min-w-0">
                 <button
                   type="button"
                   onClick={() => onToolChange("select")}
@@ -318,7 +318,7 @@ export function LeftSidebar({
                   Eraser
                 </button>
               </div>
-              <div className="mt-2 grid grid-cols-3 gap-2 min-w-0">
+              <div className="mt-1 grid grid-cols-3 gap-1 min-w-0">
                 <button
                   type="button"
                   onClick={onAddLayer}
@@ -351,8 +351,8 @@ export function LeftSidebar({
                   />
                 </label>
               </div>
-              <div className="mt-2 min-w-0 overflow-hidden">
-                <div className="grid grid-cols-2 gap-2 min-w-0">
+              <div className="mt-1 min-w-0 overflow-hidden">
+                <div className="grid grid-cols-2 gap-1 min-w-0">
                   <button
                     type="button"
                     onClick={() => onZoomChange(zoomLevel - 10)}
@@ -500,8 +500,8 @@ export function LeftSidebar({
         </ScrollArea>
       </div>
 
-      <div className="panel-3d flex-shrink-0 px-4 py-3 border-t border-white/5">
-        <div className="flex flex-col items-stretch gap-2">
+      <div className="panel-3d flex-shrink-0 px-4 py-2 border-t border-white/5">
+        <div className="flex flex-col items-stretch gap-1">
           <button
             type="button"
             onClick={onOpenAbout}

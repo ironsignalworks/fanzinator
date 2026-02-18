@@ -111,10 +111,10 @@ label.cursor-pointer {
 
 /* Unified control density for pills/buttons/toggles/dropdowns. */
 [data-role="app-shell"] {
-  --control-height: 1.3rem;
-  --control-font: 0.55rem;
-  --control-pad-x: 0.4rem;
-  --control-gap: 0.2rem;
+  --control-height: 1.75rem;
+  --control-font: 0.64rem;
+  --control-pad-x: 0.42rem;
+  --control-gap: 0.12rem;
   --control-icon-size: 0.9rem;
   --ui-base: #0d0d0d;
   --ui-surface: #161616;
@@ -344,7 +344,7 @@ label.cursor-pointer {
   label.cursor-pointer
 ) {
   font-size: var(--control-font) !important;
-  line-height: 1.1 !important;
+  line-height: 1.2 !important;
 }
 
 [data-role="app-shell"] .inspector-compact :is(
@@ -380,11 +380,22 @@ label.cursor-pointer {
   padding-left: var(--control-pad-x) !important;
   padding-right: var(--control-pad-x) !important;
   font-size: var(--control-font) !important;
-  line-height: 1;
+  line-height: 1.2;
   text-align: center;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   gap: var(--control-gap) !important;
   border-radius: 0;
+}
+
+[data-role="app-shell"] :is(
+  .text-\[9px\],
+  .text-\[10px\],
+  .text-\[11px\],
+  .text-xs,
+  .text-sm
+) {
+  font-size: 0.72rem !important;
+  line-height: 1.2 !important;
 }
 
 [data-role="app-shell"] :is(button, [role="button"], label.cursor-pointer) :is(svg) {
@@ -416,8 +427,8 @@ label.cursor-pointer {
   padding-left: var(--control-pad-x) !important;
   padding-right: var(--control-pad-x) !important;
   font-size: var(--control-font) !important;
-  line-height: 1;
-  letter-spacing: 0.04em;
+  line-height: 1.2;
+  letter-spacing: 0.03em;
   border-radius: 0;
 }
 
@@ -505,10 +516,10 @@ label.cursor-pointer {
 
 @media (max-width: 1023px) {
   [data-role="app-shell"] {
-    --control-height: 2.45rem;
-    --control-font: 0.68rem;
-    --control-pad-x: 0.62rem;
-    --control-gap: 0.3rem;
+    --control-height: 2.6rem;
+    --control-font: 0.72rem;
+    --control-pad-x: 0.52rem;
+    --control-gap: 0.2rem;
     --control-icon-size: 1rem;
   }
 

@@ -2263,7 +2263,7 @@ export default function App() {
         </div>
       )}
       {!isPlaying && (
-      <div className="panel-3d print-hide relative flex-shrink-0 min-h-16 px-3 lg:px-0 pt-[max(env(safe-area-inset-top),0.5rem)] pb-2 lg:py-0 flex flex-col lg:flex-row lg:items-center gap-2 border-b border-white/5 bg-[#0a0a0a]">
+      <div className="panel-3d print-hide relative flex-shrink-0 min-h-16 px-3 lg:px-0 pt-[max(env(safe-area-inset-top),0.5rem)] pb-2 lg:py-0 flex flex-col lg:flex-row lg:items-center gap-1 border-b border-white/5 bg-[#0a0a0a]">
         <div
           className="absolute right-3 top-2 text-[10px] uppercase tracking-wider text-[#737373] pointer-events-none"
           title="Click app name to change skin"
@@ -2290,7 +2290,7 @@ export default function App() {
               Visual graphics studio
             </span>
           </div>
-          <div className="lg:hidden flex items-center gap-2">
+          <div className="lg:hidden flex items-center gap-1">
             <button
               onClick={() => {
                 setShowMobileLeftSidebar((prev) => !prev);
@@ -2314,8 +2314,8 @@ export default function App() {
           </div>
         </div>
         <div className="w-full lg:flex-1 lg:flex lg:justify-end lg:pr-0 lg:mr-[20rem] overflow-hidden">
-          <div className="flex flex-col gap-2 text-xs text-[#737373] w-full max-w-full pb-1 lg:pb-0">
-            <div className="grid grid-cols-3 lg:grid-cols-5 gap-2">
+          <div className="flex flex-col gap-1 text-xs text-[#737373] w-full max-w-full pb-1 lg:pb-0">
+            <div className="grid grid-cols-3 lg:grid-cols-5 gap-1">
               <div className="control-pill order-1 lg:order-1 w-full min-w-0 border border-white/10 text-[10px] uppercase tracking-wider text-[#737373] flex items-center overflow-hidden">
                 <span className="truncate min-w-0">Back {historyPast.length} | Fwd {historyFuture.length} | {historyLog[0] ?? "Ready"}</span>
               </div>
@@ -2445,7 +2445,7 @@ export default function App() {
                 <Printer />
                 Print
               </button>
-              <label className="control-pill order-11 lg:order-2 w-full min-w-0 border border-white/20 text-[10px] uppercase tracking-wider text-[#fafafa] hover:border-white/30 hover:bg-white/10 transition-colors cursor-pointer flex items-center justify-center gap-2 overflow-hidden">
+              <label className="control-pill order-11 lg:order-2 w-full min-w-0 border border-white/20 text-[10px] uppercase tracking-wider text-[#fafafa] hover:border-white/30 hover:bg-white/10 transition-colors cursor-pointer flex items-center justify-center gap-1 overflow-hidden">
                 <Upload className="w-4 h-4" />
                 Import
                 <input
