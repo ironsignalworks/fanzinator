@@ -2443,6 +2443,7 @@ export default function App() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return;
+      if (showExport || showAbout || showShareQr || showOnboarding || Boolean(expandedNodeId)) return;
       const target = event.target as HTMLElement | null;
       const isEditable =
         target &&
@@ -2473,6 +2474,22 @@ export default function App() {
       if (isMeta && event.key.toLowerCase() === "n") {
         event.preventDefault();
         handleAddNode();
+        return;
+      }
+      const key = event.key.toLowerCase();
+      if (key === "v") {
+        event.preventDefault();
+        setActiveTool("select");
+        return;
+      }
+      if (key === "b") {
+        event.preventDefault();
+        setActiveTool("brush");
+        return;
+      }
+      if (key === "e") {
+        event.preventDefault();
+        setActiveTool("eraser");
         return;
       }
       if (event.key.startsWith("Arrow")) {
@@ -2508,6 +2525,11 @@ export default function App() {
     handleDeleteNodes,
     handleClearSelection,
     currentCanvas,
+    showExport,
+    showAbout,
+    showShareQr,
+    showOnboarding,
+    expandedNodeId,
   ]);
 
   const filteredNodes = useMemo(() => {
@@ -2585,7 +2607,7 @@ export default function App() {
         >
           Skin: {uiSkinLabel}
         </div>
-        <div className="flex items-center justify-between lg:basis-[16rem] lg:min-w-[16rem] lg:max-w-[16rem] lg:px-6">
+        <div className="flex items-center justify-between lg:basis-[16rem] lg:min-w-[16rem] lg:max-w-[16rem] lg:px-4">
           <div
             onClick={handleCycleUiSkin}
             onKeyDown={(event) => {
@@ -2595,13 +2617,13 @@ export default function App() {
               }
             }}
             tabIndex={0}
-            className="app-logo-trigger flex flex-col items-start gap-0 leading-tight text-left cursor-pointer select-none transition-transform active:translate-y-px outline-none focus:outline-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-white/30 focus-visible:outline-offset-2"
+            className="app-logo-trigger flex min-h-[3.35rem] flex-col items-start justify-center gap-0.5 py-1 pr-2 leading-[1.15] text-left cursor-pointer select-none overflow-visible transition-transform active:translate-y-px outline-none focus:outline-none focus-visible:outline focus-visible:outline-1 focus-visible:outline-white/30 focus-visible:outline-offset-2"
             aria-label="Cycle interface skin"
           >
-            <span className="fanzinator-title text-xl font-light tracking-wide text-[#fafafa]">
+            <span className="fanzinator-title text-[2rem] font-light tracking-wide leading-[1.02] text-[#fafafa] [text-shadow:0_1px_0_rgba(0,0,0,0.75)]">
               Fanzinator
             </span>
-            <span className="fanzinator-subtitle text-[10px] font-light text-[#fafafa]">
+            <span className="fanzinator-subtitle text-[11px] font-light tracking-[0.14em] leading-[1.1] text-[#f0f0f0] [text-shadow:0_1px_0_rgba(0,0,0,0.85)]">
               Visual graphics studio
             </span>
           </div>
@@ -2628,7 +2650,7 @@ export default function App() {
             </button>
           </div>
         </div>
-        <div className="w-full lg:flex-1 lg:flex lg:justify-end lg:pr-0 lg:mr-[20rem] overflow-hidden">
+        <div className="w-full lg:flex-1 lg:min-w-0 lg:pr-0 lg:mr-[20rem] overflow-hidden">
           <div className="flex flex-col gap-1 text-xs text-[#737373] w-full max-w-full pb-1 lg:pb-0">
             <div className="grid grid-cols-3 lg:grid-cols-5 gap-1">
               <div className="control-pill order-1 lg:order-1 w-full min-w-0 border border-white/10 text-[10px] uppercase tracking-wider text-[#737373] flex items-center overflow-hidden">
@@ -3662,6 +3684,7 @@ export default function App() {
               <div className="space-y-2">
                 <div className="text-[11px] uppercase tracking-wider text-[#bdbdbd]">Edit + Navigation</div>
                 <div>Undo/Redo via buttons or Cmd/Ctrl+Z and Shift+Cmd/Ctrl+Z. Duplicate with Cmd/Ctrl+D. Delete with Delete/Backspace.</div>
+                <div>Photoshop-style tool keys: V = Select, B = Brush, E = Eraser.</div>
                 <div>Pan by dragging empty space. Zoom with wheel or zoom controls. Double-click export preview to reset zoom/pan.</div>
               </div>
 
