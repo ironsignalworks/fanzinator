@@ -8,6 +8,7 @@ import { Plus, ZoomIn, RotateCcw, RotateCw, Printer, Frame, Download, Crop, Link
 const STORAGE_KEY = "fanzinator:canvas-editor:v2";
 const RESET_KEY = "fanzinator:force-reset:v1";
 const UI_SKIN_KEY = "fanzinator:ui-skin:v1";
+const ONBOARDING_KEY = "fanzinator:onboarding:v1";
 const SCHEMA_VERSION = 1;
 const HISTORY_LIMIT = 50;
 // 8.5x11 portrait at 96dpi-equivalent working units.
@@ -70,6 +71,28 @@ const UI_SKIN_LABELS: Record<UiSkin, string> = {
   terminal: "Terminal",
   "psy-ops": "Psy-Ops",
 };
+const ONBOARDING_STEPS: Array<{ title: string; description: string }> = [
+  {
+    title: "Import Assets",
+    description:
+      "Use Import from the top bar or right inspector to bring in images and text files quickly.",
+  },
+  {
+    title: "Build Layers",
+    description:
+      "Add image and text layers from the left panel, then drag layers to reorder and toggle visibility.",
+  },
+  {
+    title: "Edit Precisely",
+    description:
+      "Select a layer to edit metadata, text styles, opacity, presets, and media from the inspector.",
+  },
+  {
+    title: "Export & Share",
+    description:
+      "Use Export Snip, Download, and Share Link in the top bar for final output and distribution.",
+  },
+];
 
 const nextAutoCanvasName = (existingNames: Iterable<string>) => {
   const normalized = new Set(Array.from(existingNames, (name) => name.trim().toLowerCase()));
@@ -472,8 +495,12 @@ export default function App() {
   const [showMobileLeftSidebar, setShowMobileLeftSidebar] = useState(false);
   const [showMobileRightSidebar, setShowMobileRightSidebar] = useState(false);
   const [uiSkin, setUiSkin] = useState<UiSkin>("standard");
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
   const [activeTool, setActiveTool] = useState<"select" | "brush" | "eraser">("select");
   const [historyLog, setHistoryLog] = useState<string[]>([]);
+  const [saveStatus, setSaveStatus] = useState<"saving" | "saved" | "error">("saved");
+  const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
   const [brushPreset, setBrushPreset] = useState<"ink" | "marker" | "chalk">("marker");
   const [brushShape, setBrushShape] = useState<"round" | "square" | "triangle">("round");
   const [brushSize, setBrushSize] = useState(6);
@@ -509,6 +536,14 @@ export default function App() {
     });
   };
   const uiSkinLabel = UI_SKIN_LABELS[uiSkin];
+  const onboardingTotal = ONBOARDING_STEPS.length;
+  const isOnboardingLastStep = onboardingStep >= onboardingTotal - 1;
+  const activeOnboardingStep = ONBOARDING_STEPS[Math.min(onboardingStep, onboardingTotal - 1)];
+  const completeOnboarding = () => {
+    localStorage.setItem(ONBOARDING_KEY, "done");
+    setShowOnboarding(false);
+    setOnboardingStep(0);
+  };
 
   const handleNukeAndRestart = async () => {
     const shouldProceed = window.confirm(
@@ -602,6 +637,12 @@ export default function App() {
     const storedSkin = localStorage.getItem(UI_SKIN_KEY) as UiSkin | null;
     if (storedSkin && UI_SKINS.includes(storedSkin)) {
       setUiSkin(storedSkin);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (localStorage.getItem(ONBOARDING_KEY) !== "done") {
+      setShowOnboarding(true);
     }
   }, []);
 
@@ -717,12 +758,21 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    setSaveStatus("saving");
     const payload = JSON.stringify({ canvases, currentCanvasId });
     try {
       localStorage.setItem(STORAGE_KEY, payload);
-    } catch {
+      setSaveStatus("saved");
+      setSaveErrorMessage(null);
+    } catch (error) {
       // Large imported files can exceed storage quota on mobile browsers.
       // Keep the editor running even if autosave fails.
+      setSaveStatus("error");
+      if (error instanceof DOMException && error.name === "QuotaExceededError") {
+        setSaveErrorMessage("Autosave full. Free storage or export your project file.");
+      } else {
+        setSaveErrorMessage("Autosave failed. Recent edits may not persist after refresh.");
+      }
     }
   }, [canvases, currentCanvasId]);
 
@@ -2211,6 +2261,8 @@ export default function App() {
     expandedMedia.startsWith("data:video/") || /\.(mp4|webm|ogg)$/i.test(expandedMedia);
   const printNodes = currentCanvas?.nodes.filter((node) => node.visible !== false) ?? [];
   const activePrintArea = resolvePrintArea(currentCanvas?.printOrientation ?? "portrait");
+  const saveStatusLabel =
+    saveStatus === "saving" ? "Saving..." : saveStatus === "error" ? "Save Failed" : "Saved";
 
   return (
     <div 
@@ -2317,7 +2369,9 @@ export default function App() {
           <div className="flex flex-col gap-1 text-xs text-[#737373] w-full max-w-full pb-1 lg:pb-0">
             <div className="grid grid-cols-3 lg:grid-cols-5 gap-1">
               <div className="control-pill order-1 lg:order-1 w-full min-w-0 border border-white/10 text-[10px] uppercase tracking-wider text-[#737373] flex items-center overflow-hidden">
-                <span className="truncate min-w-0">Back {historyPast.length} | Fwd {historyFuture.length} | {historyLog[0] ?? "Ready"}</span>
+                <span className="truncate min-w-0">
+                  Back {historyPast.length} | Fwd {historyFuture.length} | {historyLog[0] ?? "Ready"} | {saveStatusLabel}
+                </span>
               </div>
               <button
                 type="button"
@@ -2461,6 +2515,11 @@ export default function App() {
                 />
               </label>
             </div>
+            {saveStatus === "error" && saveErrorMessage && (
+              <div className="text-[10px] uppercase tracking-wider text-[#d9a66f]" aria-live="polite">
+                {saveErrorMessage}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -3329,6 +3388,63 @@ export default function App() {
                 <div className="text-[11px] uppercase tracking-wider text-[#bdbdbd]">Import</div>
                 <div>Main import is in the left footer. You can also drag/drop supported files directly onto the canvas.</div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showOnboarding && (
+        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[90]">
+          <div className="panel-3d w-[560px] max-w-[94vw] bg-[#0a0a0a] border border-white/10 rounded-none p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-[#737373]">Quick Start</div>
+                <div className="text-base text-[#fafafa] font-light mt-1">{activeOnboardingStep.title}</div>
+              </div>
+              <button
+                type="button"
+                onClick={completeOnboarding}
+                className="h-8 w-8 rounded-none border border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20 transition-colors flex items-center justify-center"
+                aria-label="Close onboarding"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <div className="mt-4 text-sm text-[#a8a8a8] leading-relaxed">
+              {activeOnboardingStep.description}
+            </div>
+            <div className="mt-4 text-[10px] uppercase tracking-wider text-[#737373]">
+              Step {onboardingStep + 1} of {onboardingTotal}
+            </div>
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={completeOnboarding}
+                className="h-9 rounded-none border border-white/10 text-[10px] uppercase tracking-wider text-[#737373] hover:text-[#fafafa] hover:border-white/20 transition-colors"
+              >
+                Skip
+              </button>
+              <button
+                type="button"
+                onClick={() => setOnboardingStep((prev) => Math.max(0, prev - 1))}
+                disabled={onboardingStep === 0}
+                className="h-9 rounded-none border border-white/10 text-[10px] uppercase tracking-wider text-[#737373] hover:text-[#fafafa] hover:border-white/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (isOnboardingLastStep) {
+                    completeOnboarding();
+                  } else {
+                    setOnboardingStep((prev) => Math.min(onboardingTotal - 1, prev + 1));
+                  }
+                }}
+                className="h-9 rounded-none border border-white/20 text-[10px] uppercase tracking-wider text-[#fafafa] bg-white/10 hover:bg-white/15 transition-colors"
+              >
+                {isOnboardingLastStep ? "Done" : "Next"}
+              </button>
             </div>
           </div>
         </div>
