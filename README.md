@@ -60,5 +60,9 @@ It supports multi-canvas projects, freeform composition, drawing tools, and prod
 - `Ctrl/Cmd + N`: Add image layer
 - `Delete` / `Backspace`: Delete selected layer(s)
 - `Esc`: Clear selection
+- `V`: Select tool
+- `B`: Brush tool
+- `E`: Eraser tool
+
 
 Live URL: `https://ironsignalworks.github.io/fanzinator/`

@@ -1645,6 +1645,40 @@ export default function App() {
     return new Blob([out], { type: "image/x-icon" });
   };
 
+  const presentExportBlob = async (blob: Blob, fileName: string) => {
+    if (isMobileViewport && typeof File !== "undefined" && typeof navigator.share === "function") {
+      try {
+        const file = new File([blob], fileName, { type: blob.type || "application/octet-stream" });
+        const canShareFiles =
+          typeof navigator.canShare !== "function" || navigator.canShare({ files: [file] });
+        if (canShareFiles) {
+          await navigator.share({ files: [file], title: fileName });
+          return;
+        }
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          throw error;
+        }
+      }
+    }
+
+    const url = URL.createObjectURL(blob);
+    try {
+      if (isMobileViewport) {
+        window.open(url, "_blank", "noopener,noreferrer");
+        return;
+      }
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } finally {
+      window.setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }
+  };
+
   const escapeXml = (value: string) =>
     value
       .replace(/&/g, "&amp;")
@@ -2004,78 +2038,75 @@ export default function App() {
 
   const runExport = async () => {
     if (!currentCanvas) return;
-    const nodes = getVisibleNodes();
-    if (nodes.length === 0) {
-      window.alert("Nothing to export.");
-      return;
-    }
-    const bounds = getExportBounds(nodes);
-    const width = Math.max(16, Math.round(exportWidth));
-    const height = Math.max(16, Math.round(exportHeight));
-    const renderWidth = width * exportScale;
-    const renderHeight = height * exportScale;
-    const fileBase = (currentCanvas.name || "canvas").trim().toLowerCase().replace(/\s+/g, "-") || "canvas";
-
-    if (exportFormat === "svg") {
-      if (exportFinalPass !== "none") {
-        window.alert("Final pass is not applied to SVG exports.");
+    try {
+      const nodes = getVisibleNodes();
+      if (nodes.length === 0) {
+        window.alert("Nothing to export.");
+        return;
       }
-      const svgMarkup = buildExportSvgMarkup(nodes, bounds, renderWidth, renderHeight, {
+      const bounds = getExportBounds(nodes);
+      const width = Math.max(16, Math.round(exportWidth));
+      const height = Math.max(16, Math.round(exportHeight));
+      const renderWidth = width * exportScale;
+      const renderHeight = height * exportScale;
+      const fileBase = (currentCanvas.name || "canvas").trim().toLowerCase().replace(/\s+/g, "-") || "canvas";
+
+      if (exportFormat === "svg") {
+        if (exportFinalPass !== "none") {
+          window.alert("Final pass is not applied to SVG exports.");
+        }
+        const svgMarkup = buildExportSvgMarkup(nodes, bounds, renderWidth, renderHeight, {
+          includeFilters: exportIncludeFilters,
+        });
+        const svgBlob = new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" });
+        await presentExportBlob(svgBlob, `${fileBase}.svg`);
+        setShowExport(false);
+        return;
+      }
+
+      const canvas = await renderExportCanvas(nodes, bounds, renderWidth, renderHeight, {
         includeFilters: exportIncludeFilters,
       });
-      const svgBlob = new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" });
-      const svgUrl = URL.createObjectURL(svgBlob);
-      const link = document.createElement("a");
-      link.href = svgUrl;
-      link.download = `${fileBase}.svg`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(svgUrl);
+      applyFinalPassToCanvas(canvas, exportFinalPass, exportFinalPassAmount);
+
+      const mimeType =
+        exportFormat === "jpeg"
+          ? "image/jpeg"
+          : exportFormat === "webp"
+          ? "image/webp"
+          : exportFormat === "avif"
+          ? "image/avif"
+          : exportFormat === "gif"
+          ? "image/gif"
+          : exportFormat === "heic"
+          ? "image/heic"
+          : "image/png";
+      if (!canEncodeCanvasMimeType(mimeType)) {
+        window.alert(`${exportFormat.toUpperCase()} export is not supported in this browser. Try PNG, JPEG, or WEBP.`);
+        return;
+      }
+      const blob = await blobFromCanvas(
+        canvas,
+        mimeType,
+        exportFormat === "jpeg" || exportFormat === "webp" || exportFormat === "avif" ? exportQuality : undefined
+      );
+      const outputBlob =
+        exportFormat === "ico"
+          ? await buildIcoBlobFromPng(await blobFromCanvas(canvas, "image/png"), renderWidth, renderHeight)
+          : blob;
+      const extension = exportFormat === "jpeg" ? "jpg" : exportFormat;
+      await presentExportBlob(outputBlob, `${fileBase}.${extension}`);
       setShowExport(false);
-      return;
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+      window.alert(
+        isMobileViewport
+          ? "Export failed on this device. Try PNG format and a lower resolution."
+          : "Export failed. Try a supported format or lower resolution."
+      );
     }
-
-    const canvas = await renderExportCanvas(nodes, bounds, renderWidth, renderHeight, {
-      includeFilters: exportIncludeFilters,
-    });
-    applyFinalPassToCanvas(canvas, exportFinalPass, exportFinalPassAmount);
-
-    const mimeType =
-      exportFormat === "jpeg"
-        ? "image/jpeg"
-        : exportFormat === "webp"
-        ? "image/webp"
-        : exportFormat === "avif"
-        ? "image/avif"
-        : exportFormat === "gif"
-        ? "image/gif"
-        : exportFormat === "heic"
-        ? "image/heic"
-        : "image/png";
-    if (!canEncodeCanvasMimeType(mimeType)) {
-      window.alert(`${exportFormat.toUpperCase()} export is not supported in this browser. Try PNG, JPEG, or WEBP.`);
-      return;
-    }
-    const blob = await blobFromCanvas(
-      canvas,
-      mimeType,
-      exportFormat === "jpeg" || exportFormat === "webp" || exportFormat === "avif" ? exportQuality : undefined
-    );
-    const outputBlob =
-      exportFormat === "ico"
-        ? await buildIcoBlobFromPng(await blobFromCanvas(canvas, "image/png"), renderWidth, renderHeight)
-        : blob;
-    const extension = exportFormat === "jpeg" ? "jpg" : exportFormat;
-    const url = URL.createObjectURL(outputBlob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${fileBase}.${extension}`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-    setShowExport(false);
   };
 
   const handleShareVisibleCanvasImageLink = async () => {

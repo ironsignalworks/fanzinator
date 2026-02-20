@@ -379,7 +379,7 @@ export function RightSidebar({
 
   useEffect(() => {
     if (!isFontMenuOpen && !isPresetMenuOpen) return;
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: PointerEvent) => {
       const target = event.target as Node | null;
       if (!target) return;
       if (!fontMenuRef.current?.contains(target)) {
@@ -389,9 +389,9 @@ export function RightSidebar({
         setIsPresetMenuOpen(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
+    window.addEventListener("pointerdown", handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("pointerdown", handleClickOutside);
     };
   }, [isFontMenuOpen, isPresetMenuOpen]);
 
@@ -604,7 +604,9 @@ export function RightSidebar({
               <button
                 type="button"
                 onClick={onOpenPreview}
-                className="inspector-preview w-full bg-white/5 border border-white/5 rounded-none flex items-center justify-center overflow-hidden hover:border-white/20 transition-colors cursor-zoom-in"
+                className={`inspector-preview w-full bg-white/5 border border-white/5 rounded-none flex items-center justify-center overflow-hidden hover:border-white/20 transition-colors cursor-zoom-in ${
+                  selectedNode.preset ? `preset-${selectedNode.preset}` : ""
+                }`}
                 aria-label="Open preview"
               >
                 {previewSrc ? (
@@ -612,6 +614,7 @@ export function RightSidebar({
                     src={previewSrc}
                     alt={altText || title}
                     className="w-full h-full object-contain"
+                    style={{ filter: selectedNode.invertColors ? "invert(1)" : "none" }}
                   />
                 ) : (
                   <div className="text-[#737373] text-xs font-light">No thumbnail</div>
