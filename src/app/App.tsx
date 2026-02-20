@@ -2755,8 +2755,8 @@ export default function App() {
                 }}
                 className={`control-pill order-4 lg:order-3 w-full min-w-0 border text-[10px] uppercase tracking-wider transition-colors ${
                   printFrame.enabled
-                    ? "border-white/20 text-[#fafafa] bg-white/5"
-                    : "border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20"
+                    ? "border-white/30 text-[#fafafa] bg-white/12"
+                    : "border-white/20 text-[#fafafa] bg-white/5 hover:border-white/30 hover:bg-white/10"
                 }`}
               >
                 <Crop />
@@ -2766,8 +2766,8 @@ export default function App() {
                 onClick={() => setShowPrintArea((prev) => !prev)}
                 className={`control-pill order-7 lg:order-4 w-full min-w-0 border text-[10px] uppercase tracking-wider transition-colors ${
                   showPrintArea
-                    ? "border-white/20 text-[#fafafa] bg-white/5"
-                    : "border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20"
+                    ? "border-white/30 text-[#fafafa] bg-white/12"
+                    : "border-white/20 text-[#fafafa] bg-white/5 hover:border-white/30 hover:bg-white/10"
                 }`}
               >
                 <Frame />
@@ -2777,7 +2777,7 @@ export default function App() {
                 onClick={() => {
                   void handleShareVisibleCanvasImageLink();
                 }}
-                className="control-pill order-3 lg:order-5 w-full min-w-0 border border-white/10 text-[10px] uppercase tracking-wider text-[#737373] hover:text-[#fafafa] hover:border-white/20 transition-colors"
+                className="control-pill order-3 lg:order-5 w-full min-w-0 border border-white/20 bg-white/5 text-[10px] uppercase tracking-wider text-[#fafafa] hover:border-white/30 hover:bg-white/10 transition-colors"
               >
                 <Link2 />
                 {isMobileViewport ? "Share Link" : "Share Image Link"}
@@ -2802,14 +2802,14 @@ export default function App() {
               </button>
               <button
                 onClick={openExportPanel}
-                className="control-pill order-5 lg:order-8 w-full min-w-0 border border-white/10 text-[10px] uppercase tracking-wider text-[#737373] hover:text-[#fafafa] hover:border-white/20 transition-colors"
+                className="control-pill order-5 lg:order-8 w-full min-w-0 border border-white/20 bg-white/5 text-[10px] uppercase tracking-wider text-[#fafafa] hover:border-white/30 hover:bg-white/10 transition-colors"
               >
                 <Download />
                 Download
               </button>
               <button
                 onClick={handlePrintCanvas}
-                className="control-pill order-6 lg:order-9 w-full min-w-0 border border-white/10 text-[10px] uppercase tracking-wider text-[#737373] hover:text-[#fafafa] hover:border-white/20 transition-colors"
+                className="control-pill order-6 lg:order-9 w-full min-w-0 border border-white/20 bg-white/5 text-[10px] uppercase tracking-wider text-[#fafafa] hover:border-white/30 hover:bg-white/10 transition-colors"
               >
                 <Printer />
                 Print
