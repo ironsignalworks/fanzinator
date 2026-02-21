@@ -16,8 +16,8 @@ interface LeftSidebarProps {
   onCanvasBackgroundChange: (color: string) => void;
   canvasPreset: "zine" | "acid" | "retro" | "mono" | "neon" | "paper" | "none";
   onCanvasPresetChange: (preset: "zine" | "acid" | "retro" | "mono" | "neon" | "paper" | "none") => void;
-  selectedLayerId: string;
-  onSelectLayer: (id: string) => void;
+  selectedLayerIds: string[];
+  onSelectLayer: (id: string, additive: boolean) => void;
   onRenameLayer: (id: string, nextTitle: string) => void;
   onCreateCanvas: () => string;
   onRenameCanvas: (nextName: string) => void;
@@ -46,7 +46,7 @@ export function LeftSidebar({
   onCanvasBackgroundChange,
   canvasPreset,
   onCanvasPresetChange,
-  selectedLayerId,
+  selectedLayerIds,
   onSelectLayer,
   onRenameLayer,
   onCreateCanvas,
@@ -391,7 +391,7 @@ export function LeftSidebar({
             </div>
             <div className="space-y-1 min-w-0 overflow-hidden">
               {nodes.map((node) => {
-                const isSelectedLayer = selectedLayerId === node.id;
+                const isSelectedLayer = selectedLayerIds.includes(node.id);
                 const isDraggingLayer = draggingId === node.id;
                 return (
                 <div
@@ -407,8 +407,8 @@ export function LeftSidebar({
                     setDraggingId(null);
                   }}
                   onDragEnd={() => setDraggingId(null)}
-                  onClick={() => {
-                    onSelectLayer(node.id);
+                  onClick={(event) => {
+                    onSelectLayer(node.id, event.shiftKey || event.metaKey || event.ctrlKey);
                   }}
                   onDoubleClick={(event) => {
                     event.preventDefault();

@@ -53,6 +53,19 @@ type ExportTemplateId =
   | "hd"
   | "full-hd"
   | "4k";
+type StartTemplateCategory = "social" | "print" | "screen" | "mobile" | "paper";
+type StartTemplateId = string;
+type StartMoreSizeId =
+  | "a0"
+  | "a1"
+  | "a2"
+  | "a3"
+  | "a5"
+  | "letter"
+  | "legal"
+  | "tabloid"
+  | "b5"
+  | "postcard";
 type VisualPreset = "zine" | "acid" | "retro" | "mono" | "neon" | "paper";
 type FilterOp =
   | { kind: "grayscale"; value: number }
@@ -61,6 +74,7 @@ type FilterOp =
   | { kind: "saturate"; value: number }
   | { kind: "sepia"; value: number }
   | { kind: "hueRotate"; value: number };
+type SupportPromptContext = "export" | "share" | "project";
 
 const EXPORT_FORMAT_OPTIONS: ExportFormat[] = ["png", "jpeg", "webp", "svg", "ico", "avif", "gif", "heic"];
 const UI_SKINS: UiSkin[] = ["standard", "fanzine", "blade-runner", "terminal", "psy-ops"];
@@ -71,6 +85,8 @@ const UI_SKIN_LABELS: Record<UiSkin, string> = {
   terminal: "Terminal",
   "psy-ops": "Psy-Ops",
 };
+
+const DONATION_URL = "https://donate.stripe.com/4gMdR25le5GXenHbrT5Ne00";
 const ONBOARDING_STEPS: Array<{ title: string; description: string }> = [
   {
     title: "Import Assets",
@@ -137,6 +153,78 @@ const EXPORT_TEMPLATES: Array<{
   { id: "hd", label: "HD - 1280 x 720", width: 1280, height: 720 },
   { id: "full-hd", label: "Full HD - 1920 x 1080", width: 1920, height: 1080 },
   { id: "4k", label: "4K UHD - 3840 x 2160", width: 3840, height: 2160 },
+];
+
+const START_TEMPLATES: Array<{
+  id: StartTemplateId;
+  category: StartTemplateCategory;
+  label: string;
+  width: number;
+  height: number;
+}> = [
+  { id: "instagram-square", category: "social", label: "Instagram", width: 1080, height: 1080 },
+  { id: "instagram-story", category: "social", label: "Insta Story", width: 1080, height: 1920 },
+  { id: "instagram-portrait", category: "social", label: "Insta Portrait", width: 1080, height: 1350 },
+  { id: "fb-cover", category: "social", label: "FB Page Cover", width: 1640, height: 664 },
+  { id: "fb-event", category: "social", label: "FB Event Image", width: 1920, height: 1080 },
+  { id: "fb-group-header", category: "social", label: "FB Group Header", width: 1640, height: 856 },
+  { id: "x-post", category: "social", label: "X Post", width: 1600, height: 900 },
+  { id: "linkedin-post", category: "social", label: "LinkedIn Post", width: 1200, height: 627 },
+  { id: "pinterest-pin", category: "social", label: "Pinterest Pin", width: 1000, height: 1500 },
+
+  { id: "a4", category: "print", label: "A4 Poster", width: 794, height: 1123 },
+  { id: "a3", category: "print", label: "A3 Poster", width: 1123, height: 1587 },
+  { id: "a2", category: "print", label: "A2 Poster", width: 1587, height: 2245 },
+  { id: "letter", category: "print", label: "Letter", width: 816, height: 1056 },
+  { id: "legal", category: "print", label: "Legal", width: 816, height: 1344 },
+  { id: "tabloid", category: "print", label: "Tabloid", width: 1056, height: 1632 },
+
+  { id: "youtube-thumb", category: "screen", label: "YouTube Thumb", width: 1280, height: 720 },
+  { id: "full-hd", category: "screen", label: "Full HD", width: 1920, height: 1080 },
+  { id: "4k", category: "screen", label: "4K UHD", width: 3840, height: 2160 },
+  { id: "hd", category: "screen", label: "HD", width: 1280, height: 720 },
+  { id: "uwqhd", category: "screen", label: "UWQHD", width: 3440, height: 1440 },
+  { id: "presentation", category: "screen", label: "Presentation", width: 1920, height: 1080 },
+
+  { id: "iphone-16-pro", category: "mobile", label: "iPhone 16 Pro", width: 1179, height: 2556 },
+  { id: "iphone-16", category: "mobile", label: "iPhone 16", width: 1179, height: 2556 },
+  { id: "pixel-8", category: "mobile", label: "Pixel 8", width: 1080, height: 2400 },
+  { id: "android-common", category: "mobile", label: "Android Common", width: 1080, height: 2340 },
+  { id: "mobile-banner", category: "mobile", label: "Mobile Banner", width: 640, height: 320 },
+  { id: "story-vertical", category: "mobile", label: "Story Vertical", width: 1080, height: 1920 },
+
+  { id: "a5-paper", category: "paper", label: "A5", width: 559, height: 794 },
+  { id: "a4-paper", category: "paper", label: "A4", width: 794, height: 1123 },
+  { id: "a3-paper", category: "paper", label: "A3", width: 1123, height: 1587 },
+  { id: "a2-paper", category: "paper", label: "A2", width: 1587, height: 2245 },
+  { id: "a1-paper", category: "paper", label: "A1", width: 2245, height: 3179 },
+  { id: "letter-paper", category: "paper", label: "US Letter", width: 816, height: 1056 },
+];
+
+const START_TEMPLATE_TABS: Array<{ id: StartTemplateCategory; label: string }> = [
+  { id: "social", label: "Social" },
+  { id: "print", label: "Print" },
+  { id: "screen", label: "Screen" },
+  { id: "mobile", label: "Mobile" },
+  { id: "paper", label: "Paper" },
+];
+
+const START_MORE_SIZES: Array<{
+  id: StartMoreSizeId;
+  label: string;
+  width: number;
+  height: number;
+}> = [
+  { id: "a5", label: "A5 - 559 x 794", width: 559, height: 794 },
+  { id: "a3", label: "A3 - 1123 x 1587", width: 1123, height: 1587 },
+  { id: "a2", label: "A2 - 1587 x 2245", width: 1587, height: 2245 },
+  { id: "a1", label: "A1 - 2245 x 3179", width: 2245, height: 3179 },
+  { id: "a0", label: "A0 - 3179 x 4494", width: 3179, height: 4494 },
+  { id: "letter", label: "Letter - 816 x 1056", width: 816, height: 1056 },
+  { id: "legal", label: "Legal - 816 x 1344", width: 816, height: 1344 },
+  { id: "tabloid", label: "Tabloid - 1056 x 1632", width: 1056, height: 1632 },
+  { id: "b5", label: "B5 - 709 x 1001", width: 709, height: 1001 },
+  { id: "postcard", label: "Postcard - 1181 x 1748", width: 1181, height: 1748 },
 ];
 
 const NODE_PRESET_FILTERS: Record<VisualPreset, string> = {
@@ -609,15 +697,21 @@ export default function App() {
   const [isExportFinalPassMenuOpen, setIsExportFinalPassMenuOpen] = useState(false);
   const [shareImageUrl, setShareImageUrl] = useState("");
   const [showShareQr, setShowShareQr] = useState(false);
+  const [showSupportPrompt, setShowSupportPrompt] = useState(false);
+  const [supportPromptContext, setSupportPromptContext] = useState<SupportPromptContext>("export");
+  const [supportPromptNote, setSupportPromptNote] = useState("");
   const exportFormatMenuRef = useRef<HTMLDivElement | null>(null);
   const exportTemplateMenuRef = useRef<HTMLDivElement | null>(null);
   const exportScaleMenuRef = useRef<HTMLDivElement | null>(null);
   const exportFinalPassMenuRef = useRef<HTMLDivElement | null>(null);
   const shareModalRef = useRef<HTMLDivElement | null>(null);
+  const supportModalRef = useRef<HTMLDivElement | null>(null);
   const previewModalRef = useRef<HTMLDivElement | null>(null);
   const exportModalRef = useRef<HTMLDivElement | null>(null);
   const aboutModalRef = useRef<HTMLDivElement | null>(null);
   const onboardingModalRef = useRef<HTMLDivElement | null>(null);
+  const startModalRef = useRef<HTMLDivElement | null>(null);
+  const startMoreSizesMenuRef = useRef<HTMLDivElement | null>(null);
   const [isFileDragActive, setIsFileDragActive] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [showMobileLeftSidebar, setShowMobileLeftSidebar] = useState(false);
@@ -625,6 +719,14 @@ export default function App() {
   const [uiSkin, setUiSkin] = useState<UiSkin>("standard");
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
+  const [showStartModal, setShowStartModal] = useState(false);
+  const [startProjectName, setStartProjectName] = useState("New Project");
+  const [startCategory, setStartCategory] = useState<StartTemplateCategory>("social");
+  const [startTemplate, setStartTemplate] = useState<StartTemplateId>("instagram-square");
+  const [isStartMoreSizesOpen, setIsStartMoreSizesOpen] = useState(false);
+  const [selectedStartMoreSizeId, setSelectedStartMoreSizeId] = useState<StartMoreSizeId | null>(null);
+  const [startWidth, setStartWidth] = useState(1080);
+  const [startHeight, setStartHeight] = useState(1080);
   const [activeTool, setActiveTool] = useState<"select" | "brush" | "eraser">("select");
   const [historyLog, setHistoryLog] = useState<string[]>([]);
   const [saveStatus, setSaveStatus] = useState<"saving" | "saved" | "error">("saved");
@@ -652,6 +754,17 @@ export default function App() {
   const shareQrCodeUrl = shareImageUrl
     ? `https://api.qrserver.com/v1/create-qr-code/?size=256x256&margin=0&data=${encodeURIComponent(shareImageUrl)}`
     : "";
+  const openSupportPrompt = (context: SupportPromptContext, note = "") => {
+    setSupportPromptContext(context);
+    setSupportPromptNote(note);
+    setShowSupportPrompt(true);
+  };
+  const supportPromptLead =
+    supportPromptContext === "share"
+      ? "Share generated."
+      : supportPromptContext === "project"
+      ? "Project saved."
+      : "Export complete.";
   const handleZoomChange = (value: number) => {
     setZoomLevel(clampZoom(value));
   };
@@ -803,10 +916,14 @@ export default function App() {
         JSON.stringify({ canvases: [freshCanvas], currentCanvasId: freshCanvas.id })
       );
       localStorage.setItem(RESET_KEY, "done");
+      setShowStartModal(true);
       return;
     }
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return;
+    if (!stored) {
+      setShowStartModal(true);
+      return;
+    }
     try {
       const parsed = JSON.parse(stored) as Partial<
         Snapshot & { worlds?: Canvas[]; currentWorldId?: string }
@@ -841,6 +958,7 @@ export default function App() {
         if (normalized.length > 0) {
           setCanvases(normalized);
           setCurrentCanvasId(storedCurrentId || normalized[0].id);
+          setShowStartModal(!normalized.some((canvas) => (canvas.nodes?.length ?? 0) > 0));
         } else {
           const freshCanvas: Canvas = {
             id: `canvas-${Date.now()}`,
@@ -856,6 +974,7 @@ export default function App() {
           };
           setCanvases([freshCanvas]);
           setCurrentCanvasId(freshCanvas.id);
+          setShowStartModal(true);
         }
         setSelectedNodeIds([]);
         setHistoryPast([]);
@@ -879,15 +998,19 @@ export default function App() {
         setSelectedNodeIds([]);
         setHistoryPast([]);
         setHistoryFuture([]);
+        setShowStartModal(true);
       }
     } catch {
       // Ignore malformed storage
+      setShowStartModal(true);
     }
   }, []);
 
   useEffect(() => {
     const activeModal =
+      (showStartModal ? startModalRef.current : null) ??
       (showOnboarding ? onboardingModalRef.current : null) ??
+      (showSupportPrompt ? supportModalRef.current : null) ??
       (showExport ? exportModalRef.current : null) ??
       (expandedNodeId ? previewModalRef.current : null) ??
       (showShareQr ? shareModalRef.current : null) ??
@@ -905,8 +1028,16 @@ export default function App() {
     const handleModalKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
+        if (showStartModal) {
+          setShowStartModal(false);
+          return;
+        }
         if (showOnboarding) {
           completeOnboarding();
+          return;
+        }
+        if (showSupportPrompt) {
+          setShowSupportPrompt(false);
           return;
         }
         if (showExport) {
@@ -954,7 +1085,7 @@ export default function App() {
       document.removeEventListener("keydown", handleModalKeyDown);
       previousActiveElement?.focus?.();
     };
-  }, [showOnboarding, showExport, expandedNodeId, showShareQr, showAbout, completeOnboarding]);
+  }, [showStartModal, showOnboarding, showSupportPrompt, showExport, expandedNodeId, showShareQr, showAbout, completeOnboarding]);
 
   useEffect(() => {
     setSaveStatus("saving");
@@ -1515,6 +1646,72 @@ export default function App() {
     exportAspectRatioRef.current = nextWidth / Math.max(1, nextHeight);
   };
 
+  const handleSelectStartTemplate = (templateId: StartTemplateId) => {
+    setStartTemplate(templateId);
+    setSelectedStartMoreSizeId(null);
+    const selected = START_TEMPLATES.find((template) => template.id === templateId);
+    if (!selected) return;
+    setStartWidth(Math.max(16, Math.round(selected.width)));
+    setStartHeight(Math.max(16, Math.round(selected.height)));
+  };
+
+  const handleSelectStartMoreSize = (sizeId: StartMoreSizeId) => {
+    const selected = START_MORE_SIZES.find((item) => item.id === sizeId);
+    if (!selected) return;
+    setStartTemplate("custom");
+    setSelectedStartMoreSizeId(sizeId);
+    setStartWidth(Math.max(16, Math.round(selected.width)));
+    setStartHeight(Math.max(16, Math.round(selected.height)));
+    setIsStartMoreSizesOpen(false);
+  };
+
+  const applyStartTemplate = () => {
+    const width = Math.max(16, Math.round(startWidth) || 16);
+    const height = Math.max(16, Math.round(startHeight) || 16);
+    const exportTemplateMatch = EXPORT_TEMPLATES.find(
+      (template) => template.width === width && template.height === height
+    );
+    setExportTemplate((exportTemplateMatch?.id as ExportTemplateId | undefined) ?? "custom");
+    setExportWidth(width);
+    setExportHeight(height);
+    exportAspectRatioRef.current = width / Math.max(1, height);
+    setPrintFrame({
+      x: 0,
+      y: 0,
+      width,
+      height,
+      enabled: false,
+    });
+    setShowPrintArea(false);
+    setIsStartMoreSizesOpen(false);
+    const nextName = startProjectName.trim();
+    if (nextName) {
+      setCanvases((prev) =>
+        prev.map((canvas) =>
+          canvas.id === currentCanvasId ? { ...canvas, name: nextName } : canvas
+        )
+      );
+    }
+    setShowStartModal(false);
+  };
+
+  const startTemplateComparisonBounds = useMemo(() => {
+    const maxWidth = Math.max(...START_TEMPLATES.map((template) => template.width));
+    const maxHeight = Math.max(...START_TEMPLATES.map((template) => template.height));
+    return { maxWidth, maxHeight };
+  }, []);
+  const startTemplateRenditionScale = useMemo(() => {
+    const previewMax = 88;
+    return Math.min(
+      previewMax / Math.max(1, startTemplateComparisonBounds.maxWidth),
+      previewMax / Math.max(1, startTemplateComparisonBounds.maxHeight)
+    );
+  }, [startTemplateComparisonBounds]);
+  const startTemplatesForCategory = useMemo(
+    () => START_TEMPLATES.filter((template) => template.category === startCategory),
+    [startCategory]
+  );
+
   const handleExportWidthChange = (value: number) => {
     setExportTemplate("custom");
     const nextWidth = Math.max(16, Math.round(value) || 16);
@@ -2061,6 +2258,7 @@ export default function App() {
         const svgBlob = new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" });
         await presentExportBlob(svgBlob, `${fileBase}.svg`);
         setShowExport(false);
+        openSupportPrompt("export");
         return;
       }
 
@@ -2097,6 +2295,7 @@ export default function App() {
       const extension = exportFormat === "jpeg" ? "jpg" : exportFormat;
       await presentExportBlob(outputBlob, `${fileBase}.${extension}`);
       setShowExport(false);
+      openSupportPrompt("export");
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
         return;
@@ -2149,9 +2348,9 @@ export default function App() {
       setShowShareQr(true);
       try {
         await navigator.clipboard.writeText(objectUrl);
-        window.alert("Image link copied to clipboard.");
+        openSupportPrompt("share", "Image link copied to clipboard.");
       } catch {
-        window.alert("Image link created. Clipboard access is unavailable in this browser.");
+        openSupportPrompt("share", "Image link created. Clipboard access is unavailable in this browser.");
       }
     } catch {
       window.alert("Failed to create share image link.");
@@ -2196,23 +2395,21 @@ export default function App() {
             includeFilters: exportIncludeFilters,
           });
           setExportEstimatedBytes(new TextEncoder().encode(fullSvgMarkup).length);
-          const svgMarkup = buildExportSvgMarkup(nodes, bounds, previewWidth, previewHeight, {
-            includeFilters: exportIncludeFilters,
-          });
-          const svgBlob = new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" });
-          nextPreviewUrl = URL.createObjectURL(svgBlob);
-        } else {
-          const canvas = await renderExportCanvas(nodes, bounds, previewWidth, previewHeight, {
-            includeFilters: exportIncludeFilters,
-          });
+        }
+        const canvas = await renderExportCanvas(nodes, bounds, previewWidth, previewHeight, {
+          includeFilters: exportIncludeFilters,
+        });
+        if (exportFormat !== "svg") {
           applyFinalPassToCanvas(canvas, exportFinalPass, exportFinalPassAmount);
-          const blob = await blobFromCanvas(canvas, "image/png");
+        }
+        const blob = await blobFromCanvas(canvas, "image/png");
+        if (exportFormat !== "svg") {
           const previewPixels = Math.max(1, previewWidth * previewHeight);
           const fullPixels = Math.max(1, fullWidth * fullHeight);
           const ratio = fullPixels / previewPixels;
           setExportEstimatedBytes(Math.max(1, Math.round(blob.size * ratio)));
-          nextPreviewUrl = URL.createObjectURL(blob);
         }
+        nextPreviewUrl = URL.createObjectURL(blob);
         if (!active) {
           if (nextPreviewUrl) URL.revokeObjectURL(nextPreviewUrl);
           return;
@@ -2275,6 +2472,18 @@ export default function App() {
     window.addEventListener("pointerdown", onPointerDown);
     return () => window.removeEventListener("pointerdown", onPointerDown);
   }, [showExport]);
+
+  useEffect(() => {
+    if (!showStartModal || !isStartMoreSizesOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (startMoreSizesMenuRef.current && !startMoreSizesMenuRef.current.contains(target)) {
+        setIsStartMoreSizesOpen(false);
+      }
+    };
+    window.addEventListener("pointerdown", onPointerDown);
+    return () => window.removeEventListener("pointerdown", onPointerDown);
+  }, [showStartModal, isStartMoreSizesOpen]);
 
   const handlePrintCanvas = () => {
     if (!currentCanvas) return;
@@ -2416,7 +2625,7 @@ export default function App() {
     );
     try {
       await navigator.clipboard.writeText(payload);
-      window.alert("Canvas copied to clipboard.");
+      openSupportPrompt("project", "Project JSON copied to clipboard.");
     } catch {
       const blob = new Blob([payload], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -2427,10 +2636,19 @@ export default function App() {
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
+      openSupportPrompt("project", "Project JSON downloaded.");
     }
   };
 
   const handleSelectNode = (id: string, additive: boolean) => {
+    setSelectedNodeIds((prev) => {
+      if (!additive) return [id];
+      if (prev.includes(id)) return prev.filter((nodeId) => nodeId !== id);
+      return [...prev, id];
+    });
+  };
+
+  const handleLayerPanelSelect = (id: string, additive: boolean) => {
     setSelectedNodeIds((prev) => {
       if (!additive) return [id];
       if (prev.includes(id)) return prev.filter((nodeId) => nodeId !== id);
@@ -2473,7 +2691,7 @@ export default function App() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return;
-      if (showExport || showAbout || showShareQr || showOnboarding || Boolean(expandedNodeId)) return;
+      if (showStartModal || showSupportPrompt || showExport || showAbout || showShareQr || showOnboarding || Boolean(expandedNodeId)) return;
       const target = event.target as HTMLElement | null;
       const isEditable =
         target &&
@@ -2558,6 +2776,8 @@ export default function App() {
     showExport,
     showAbout,
     showShareQr,
+    showSupportPrompt,
+    showStartModal,
     showOnboarding,
     expandedNodeId,
   ]);
@@ -2870,8 +3090,8 @@ export default function App() {
             onCanvasBackgroundChange={updateCanvasBackground}
             canvasPreset={currentCanvas?.canvasPreset ?? "none"}
             onCanvasPresetChange={updateCanvasPreset}
-            selectedLayerId={selectedNodeIds[0] ?? ""}
-            onSelectLayer={(id) => setSelectedNodeIds([id])}
+            selectedLayerIds={selectedNodeIds}
+            onSelectLayer={handleLayerPanelSelect}
             onRenameLayer={(id, nextTitle) => updateNode(id, { title: nextTitle })}
             onCreateCanvas={handleCreateCanvas}
             onRenameCanvas={handleRenameCanvas}
@@ -3036,8 +3256,8 @@ export default function App() {
                 onCanvasBackgroundChange={updateCanvasBackground}
                 canvasPreset={currentCanvas?.canvasPreset ?? "none"}
                 onCanvasPresetChange={updateCanvasPreset}
-                selectedLayerId={selectedNodeIds[0] ?? ""}
-                onSelectLayer={(id) => setSelectedNodeIds([id])}
+                selectedLayerIds={selectedNodeIds}
+                onSelectLayer={handleLayerPanelSelect}
                 onRenameLayer={(id, nextTitle) => updateNode(id, { title: nextTitle })}
                 onCreateCanvas={handleCreateCanvas}
                 onRenameCanvas={handleRenameCanvas}
@@ -3166,6 +3386,69 @@ export default function App() {
                   Open Link
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSupportPrompt && (
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[85]">
+          <div
+            ref={supportModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Support development"
+            tabIndex={-1}
+            className="panel-3d w-[560px] max-w-[94vw] bg-[#0a0a0a] border border-white/10 rounded-none p-5"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-[10px] uppercase tracking-wider text-[#737373]">
+                {supportPromptContext === "share" ? "Share Generated" : supportPromptContext === "project" ? "Project Saved" : "Export Finished"}
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSupportPrompt(false)}
+                className="h-8 w-8 rounded-none border border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20 transition-colors flex items-center justify-center"
+                aria-label="Close support prompt"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {isMobileViewport ? (
+              <div className="mt-3 space-y-3">
+                <div className="text-sm text-[#e8e8e8]">{supportPromptLead}</div>
+                <div className="text-sm text-[#9a9a9a]">Support keeps updates coming.</div>
+              </div>
+            ) : (
+              <div className="mt-3 space-y-2">
+                <div className="text-base text-[#e8e8e8]">{supportPromptLead}</div>
+                <div className="text-sm text-[#9a9a9a] leading-relaxed">
+                  Iron Signal Works tools stay free, independent, and ad-free because some users choose to support them.
+                </div>
+              </div>
+            )}
+
+            {supportPromptNote && (
+              <div className="mt-3 text-[10px] uppercase tracking-wider text-[#737373]">{supportPromptNote}</div>
+            )}
+
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowSupportPrompt(false)}
+                className="h-9 px-3 rounded-none border border-white/10 text-[10px] uppercase tracking-wider text-[#737373] hover:text-[#fafafa] hover:border-white/20 transition-colors"
+              >
+                Close
+              </button>
+              <a
+                href={DONATION_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="h-9 px-3 rounded-none border border-white/20 text-[10px] uppercase tracking-wider text-[#fafafa] bg-white/10 hover:bg-white/15 transition-colors inline-flex items-center"
+              >
+                Support Development
+              </a>
             </div>
           </div>
         </div>
@@ -3541,7 +3824,7 @@ export default function App() {
                         </button>
                         <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#fafafa] pointer-events-none" />
                         {isExportFinalPassMenuOpen && (
-                          <div className="dropdown-panel absolute left-0 right-0 top-[calc(100%+2px)] z-50 max-h-40 overflow-y-auto rounded-none">
+                          <div className="dropdown-panel absolute left-0 right-0 bottom-[calc(100%+2px)] z-[70] max-h-40 overflow-y-auto rounded-none">
                             {(["none", "threshold", "bitmap", "posterize", "duotone"] as const).map((mode) => (
                               <button
                                 key={mode}
@@ -3639,6 +3922,212 @@ export default function App() {
         </div>
       )}
 
+      {showStartModal && (
+        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[95]">
+          <div
+            ref={startModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Start new project"
+            tabIndex={-1}
+            className="panel-3d w-[1220px] max-w-[97vw] h-[92vh] max-h-[96vh] border border-white/10 rounded-none p-6 lg:p-8 flex flex-col overflow-hidden"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-[#737373]">Start Page</div>
+                <div className="text-xl text-[#fafafa] font-light mt-1">Choose a canvas size</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsStartMoreSizesOpen(false);
+                  setShowStartModal(false);
+                }}
+                className="h-10 w-10 rounded-none border border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20 transition-colors flex items-center justify-center"
+                aria-label="Close start page"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="mt-6 flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-[1.7fr_0.9fr] gap-4 lg:gap-5">
+              <div className="border border-white/10 min-h-0 flex flex-col">
+                <div className="flex items-center gap-2 px-2 py-2 border-b border-white/10 overflow-x-auto">
+                  {START_TEMPLATE_TABS.map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setStartCategory(tab.id)}
+                      className={`h-8 px-3 rounded-none border text-[10px] uppercase tracking-wider whitespace-nowrap transition-colors ${
+                        startCategory === tab.id
+                          ? "border-white/25 bg-white/10 text-[#fafafa]"
+                          : "border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex-1 min-h-0 overflow-y-auto p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {startTemplatesForCategory.map((template) => {
+                      const renditionWidth = Math.max(12, Math.round(template.width * startTemplateRenditionScale));
+                      const renditionHeight = Math.max(12, Math.round(template.height * startTemplateRenditionScale));
+                      return (
+                        <div
+                          key={template.id}
+                          role="option"
+                          aria-selected={startTemplate === template.id}
+                          tabIndex={0}
+                          onClick={() => handleSelectStartTemplate(template.id)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              handleSelectStartTemplate(template.id);
+                            }
+                          }}
+                          className={`p-3 rounded-none border text-left transition-colors cursor-pointer ${
+                            startTemplate === template.id
+                              ? "border-white/25 bg-white/10 text-[#fafafa]"
+                              : "border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20"
+                          }`}
+                        >
+                          <div className="h-28 border border-white/20 bg-black/30 flex items-center justify-center">
+                            <div
+                              className={`border ${startTemplate === template.id ? "border-white/70" : "border-white/40"}`}
+                              style={{ width: renditionWidth, height: renditionHeight }}
+                            />
+                          </div>
+                          <div className="mt-3 text-sm text-[#e8e8e8] font-light">{template.label}</div>
+                          <div className="text-xs text-[#9d9d9d]">
+                            {template.width.toLocaleString()} x {template.height.toLocaleString()} px
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {startTemplatesForCategory.length === 0 && (
+                      <div className="col-span-full text-[11px] uppercase tracking-wider text-[#737373] p-4 border border-white/10">
+                        No presets in this category yet.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="border border-white/10 p-4 flex flex-col gap-4 min-w-0">
+                <div>
+                  <label className="text-[10px] uppercase tracking-wider text-[#737373] mb-1 block">Name</label>
+                  <input
+                    type="text"
+                    value={startProjectName}
+                    onChange={(event) => setStartProjectName(event.target.value)}
+                    className="w-full h-10 bg-transparent border border-white/10 text-[#fafafa] px-3 rounded-none text-base font-light focus:border-white/20 focus:outline-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-[minmax(0,1fr)_2.5rem_minmax(0,1fr)] gap-2 items-end">
+                  <div className="min-w-0">
+                    <label className="text-[10px] uppercase tracking-wider text-[#737373] mb-1 block">Width</label>
+                    <input
+                      type="number"
+                      min="16"
+                      value={startWidth}
+                      onChange={(event) => {
+                        setStartTemplate("custom");
+                        setSelectedStartMoreSizeId(null);
+                        setStartWidth(Math.max(16, Math.round(Number(event.target.value)) || 16));
+                      }}
+                      className="w-full h-10 bg-transparent border border-white/10 text-[#fafafa] px-3 rounded-none text-base font-light focus:border-white/20 focus:outline-none"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStartTemplate("custom");
+                      setSelectedStartMoreSizeId(null);
+                      setStartWidth((prev) => Math.max(16, Math.round(startHeight) || prev));
+                      setStartHeight((prev) => Math.max(16, Math.round(startWidth) || prev));
+                    }}
+                    className="h-10 rounded-none border border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20 transition-colors flex items-center justify-center"
+                    aria-label="Swap width and height"
+                  >
+                    ⇄
+                  </button>
+                  <div className="min-w-0">
+                    <label className="text-[10px] uppercase tracking-wider text-[#737373] mb-1 block">Height</label>
+                    <input
+                      type="number"
+                      min="16"
+                      value={startHeight}
+                      onChange={(event) => {
+                        setStartTemplate("custom");
+                        setSelectedStartMoreSizeId(null);
+                        setStartHeight(Math.max(16, Math.round(Number(event.target.value)) || 16));
+                      }}
+                      className="w-full h-10 bg-transparent border border-white/10 text-[#fafafa] px-3 rounded-none text-base font-light focus:border-white/20 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-[#737373] mb-1">Extra Sizes</div>
+                  <div className="relative min-w-0" ref={startMoreSizesMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setIsStartMoreSizesOpen((prev) => !prev)}
+                      className="h-10 w-full px-3 pr-8 rounded-none border border-white/10 text-[10px] uppercase tracking-wider text-[#fafafa] text-left hover:border-white/20 transition-colors"
+                    >
+                      {selectedStartMoreSizeId
+                        ? START_MORE_SIZES.find((item) => item.id === selectedStartMoreSizeId)?.label
+                        : "Select Extra Size"}
+                    </button>
+                    <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#737373] pointer-events-none" />
+                    {isStartMoreSizesOpen && (
+                      <div className="dropdown-panel absolute left-0 right-0 top-[calc(100%+2px)] z-[80] max-h-56 overflow-y-auto rounded-none">
+                        {START_MORE_SIZES.map((size) => (
+                          <button
+                            key={size.id}
+                            type="button"
+                            onClick={() => handleSelectStartMoreSize(size.id)}
+                            className={`dropdown-panel-item w-full h-8 px-3 border-b last:border-b-0 text-left text-[10px] uppercase tracking-wider transition-colors ${
+                              selectedStartMoreSizeId === size.id
+                                ? "text-[#fafafa] bg-white/10"
+                                : "text-[#737373] hover:text-[#fafafa] hover:bg-white/5"
+                            }`}
+                          >
+                            {size.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-auto pt-3 border-t border-white/10 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsStartMoreSizesOpen(false);
+                      setShowStartModal(false);
+                    }}
+                    className="h-10 px-4 rounded-none border border-white/10 text-[10px] uppercase tracking-wider text-[#737373] hover:text-[#fafafa] hover:border-white/20 transition-colors"
+                  >
+                    Skip
+                  </button>
+                  <button
+                    type="button"
+                    onClick={applyStartTemplate}
+                    className="h-10 px-4 rounded-none border border-white/20 text-[10px] uppercase tracking-wider text-[#fafafa] bg-white/10 hover:bg-white/15 transition-colors"
+                  >
+                    Create
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAbout && (
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
           <div
@@ -3647,81 +4136,110 @@ export default function App() {
             aria-modal="true"
             aria-label="About Layer"
             tabIndex={-1}
-            className="panel-3d w-[680px] max-w-[94vw] max-h-[88vh] overflow-y-auto bg-[#0a0a0a] border border-white/10 rounded-none p-7"
+            className="panel-3d w-[1240px] max-w-[97vw] h-[92vh] max-h-[96vh] bg-[#0a0a0a] border border-white/10 rounded-none p-6 lg:p-8 flex flex-col overflow-hidden"
           >
             <div className="flex items-center justify-between mb-5">
-              <div className="text-lg text-[#fafafa] font-light">Layer - Image + Text Editor</div>
+              <div className="flex items-center gap-3">
+                <span className="layer-title text-[2rem] font-light tracking-wide leading-[1.02] text-[#fafafa] [text-shadow:0_1px_0_rgba(0,0,0,0.75)]">
+                  Layer
+                </span>
+                <div>
+                <div className="text-[10px] uppercase tracking-wider text-[#737373]">About</div>
+                <div className="text-lg text-[#fafafa] font-light mt-1">Product Overview</div>
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => setShowAbout(false)}
-                className="h-8 w-8 rounded-none border border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20 transition-colors flex items-center justify-center"
+                className="h-10 w-10 rounded-none border border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20 transition-colors flex items-center justify-center"
                 aria-label="Close about panel"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
-            <div className="space-y-5 text-sm text-[#9a9a9a] leading-relaxed">
-              <div className="text-base text-[#e8e8e8]">
-                Layer is a focused visual graphics studio for fast collage, typography, and layer-based composition.
-              </div>
-              <div className="space-y-2 border border-white/10 p-3">
-                <div className="flex items-center justify-between">
-                  <div className="text-[11px] uppercase tracking-wider text-[#bdbdbd]">Skin</div>
-                  <div className="text-[10px] uppercase tracking-wider text-[#737373]">Current: {uiSkinLabel}</div>
+            <div className="flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-[0.75fr_1.25fr] gap-4 lg:gap-5">
+              <div className="border border-white/10 p-4 flex flex-col gap-4 min-h-0">
+                <div className="border border-white/10 p-3 space-y-2">
+                  <div className="text-[11px] uppercase tracking-wider text-[#bdbdbd]">Layer - Image + Text Editor</div>
+                  <div className="text-sm text-[#a8a8a8] leading-relaxed">
+                    A fast, layered canvas studio for collage, typography, paint, and export workflows in one place.
+                  </div>
+                  <div className="text-[10px] uppercase tracking-wider text-[#737373]">
+                    Build, edit, and publish without leaving the canvas.
+                  </div>
                 </div>
-                <div className="text-[10px] text-[#737373] uppercase tracking-wider">
-                  Tip: click app name in the header to cycle skins.
+                <div className="space-y-2 border border-white/10 p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[11px] uppercase tracking-wider text-[#bdbdbd]">Skin</div>
+                    <div className="text-[10px] uppercase tracking-wider text-[#737373]">Current: {uiSkinLabel}</div>
+                  </div>
+                  <div className="text-[10px] text-[#737373] uppercase tracking-wider">
+                    Tip: click app name in the header to cycle skins.
+                  </div>
+                </div>
+                <div className="border border-white/10 p-3 space-y-2">
+                  <div className="text-[11px] uppercase tracking-wider text-[#bdbdbd]">Key Shortcuts</div>
+                  <div className="text-sm text-[#9a9a9a] leading-relaxed">`V` Select, `B` Brush, `E` Eraser</div>
+                  <div className="text-sm text-[#9a9a9a] leading-relaxed">`Cmd/Ctrl+Z` Undo, `Shift+Cmd/Ctrl+Z` Redo</div>
+                  <div className="text-sm text-[#9a9a9a] leading-relaxed">`Cmd/Ctrl+D` Duplicate, `Delete/Backspace` Remove</div>
+                </div>
+                <div className="mt-auto pt-3 border-t border-white/10 flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowAbout(false)}
+                    className="h-10 px-4 rounded-none border border-white/20 text-[10px] uppercase tracking-wider text-[#fafafa] bg-white/10 hover:bg-white/15 transition-colors"
+                  >
+                    Close
+                  </button>
                 </div>
               </div>
-              <div>
-                Projects are auto-saved locally in your browser. You can manage multiple canvases, reorder layers, and edit image/text/stroke layers from the side panels.
-              </div>
 
-              <div className="space-y-2">
-                <div className="text-[11px] uppercase tracking-wider text-[#bdbdbd]">Canvas + Layers</div>
-                <div>Create, rename, and delete canvases from the left panel. Blank names auto-generate as canvas1, canvas2, and so on.</div>
-                <div>Set canvas preset/background, toggle layer visibility, drag to reorder, double-click a layer to rename, and use layer delete controls.</div>
-                <div>Arrow keys move selected items on canvas. Shift+drag enables box select.</div>
-              </div>
+              <div className="border border-white/10 min-h-0 overflow-y-auto p-4 space-y-4 text-sm text-[#9a9a9a] leading-relaxed">
+                <div className="border border-white/10 p-3 space-y-2">
+                  <div className="text-[11px] uppercase tracking-wider text-[#bdbdbd]">Canvas + Layers</div>
+                  <div>Create, rename, and delete canvases from the left panel. Blank names auto-generate as canvas1, canvas2, and so on.</div>
+                  <div>Set canvas preset/background, toggle layer visibility, drag to reorder, double-click a layer to rename, and use layer delete controls.</div>
+                  <div>Arrow keys move selected items on canvas. Shift+drag enables box select.</div>
+                </div>
 
-              <div className="space-y-2">
-                <div className="text-[11px] uppercase tracking-wider text-[#bdbdbd]">Tools</div>
-                <div>Left Tools panel includes Select, Brush, Eraser, Add Layer, Add Text, Import Font, and zoom controls.</div>
-                <div>Brush creates stroke layers and supports size, opacity, shape (round/square/triangle), and color.</div>
-                <div>Eraser supports size, opacity, and shape. Ghost pointers show active brush/eraser size on canvas.</div>
-                <div>Right-click on canvas while Brush/Eraser is active opens quick tool settings.</div>
-              </div>
+                <div className="border border-white/10 p-3 space-y-2">
+                  <div className="text-[11px] uppercase tracking-wider text-[#bdbdbd]">Tools</div>
+                  <div>Left Tools panel includes Select, Brush, Eraser, Add Layer, Add Text, Import Font, and zoom controls.</div>
+                  <div>Brush creates stroke layers and supports size, opacity, shape (round/square/triangle), and color.</div>
+                  <div>Eraser supports size, opacity, and shape. Ghost pointers show active brush/eraser size on canvas.</div>
+                  <div>Right-click on canvas while Brush/Eraser is active opens quick tool settings.</div>
+                </div>
 
-              <div className="space-y-2">
-                <div className="text-[11px] uppercase tracking-wider text-[#bdbdbd]">Inspector</div>
-                <div>Inspector updates by selection: media preview, title/description, URLs, tags, alt text, transparency, invert, presets, and text styling controls.</div>
-                <div>Text tools include font picker, color, size, weight/style/underline, and alignment.</div>
-              </div>
+                <div className="border border-white/10 p-3 space-y-2">
+                  <div className="text-[11px] uppercase tracking-wider text-[#bdbdbd]">Inspector</div>
+                  <div>Inspector updates by selection: media preview, title/description, URLs, tags, alt text, transparency, invert, presets, and text styling controls.</div>
+                  <div>Text tools include font picker, color, size, weight/style/underline, and alignment.</div>
+                </div>
 
-              <div className="space-y-2">
-                <div className="text-[11px] uppercase tracking-wider text-[#bdbdbd]">Edit + Navigation</div>
-                <div>Undo/Redo via buttons or Cmd/Ctrl+Z and Shift+Cmd/Ctrl+Z. Duplicate with Cmd/Ctrl+D. Delete with Delete/Backspace.</div>
-                <div>Photoshop-style tool keys: V = Select, B = Brush, E = Eraser.</div>
-                <div>Pan by dragging empty space. Zoom with wheel or zoom controls. Double-click export preview to reset zoom/pan.</div>
-              </div>
+                <div className="border border-white/10 p-3 space-y-2">
+                  <div className="text-[11px] uppercase tracking-wider text-[#bdbdbd]">Edit + Navigation</div>
+                  <div>Pan by dragging empty space. Zoom with wheel or zoom controls. Double-click export preview to reset zoom/pan.</div>
+                  <div>Projects are auto-saved locally in your browser.</div>
+                </div>
 
-              <div className="space-y-2">
-                <div className="text-[11px] uppercase tracking-wider text-[#bdbdbd]">Export + Output</div>
-                <div>Export modal supports PNG, JPEG, WEBP, SVG, ICO, AVIF, GIF, and HEIC with resolution scaling, A-series/digital templates, explicit width/height, and optional filter inclusion.</div>
-                <div>Final Pass modes: None, Threshold, Bitmap, Posterize, Duotone with intensity control (raster exports only).</div>
-                <div>Use Export Snip, Download, Share Image Link with QR, and Print from the top controls.</div>
-              </div>
+                <div className="border border-white/10 p-3 space-y-2">
+                  <div className="text-[11px] uppercase tracking-wider text-[#bdbdbd]">Export + Output</div>
+                  <div>Export supports PNG, JPEG, WEBP, SVG, ICO, AVIF, GIF, and HEIC with resolution scaling, templates, explicit width/height, and optional filter inclusion.</div>
+                  <div>Final Pass modes: None, Threshold, Bitmap, Posterize, Duotone with intensity control (raster exports only).</div>
+                  <div>Use Export Snip, Download, Share Image Link with QR, and Print from the top controls.</div>
+                </div>
 
-              <div className="space-y-2">
-                <div className="text-[11px] uppercase tracking-wider text-[#bdbdbd]">Import</div>
-                <div>Main import is in the left footer. You can also drag/drop supported files directly onto the canvas.</div>
+                <div className="border border-white/10 p-3 space-y-2">
+                  <div className="text-[11px] uppercase tracking-wider text-[#bdbdbd]">Import</div>
+                  <div>Main import is in the left footer. You can also drag/drop supported files directly onto the canvas.</div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {showOnboarding && (
+      {showOnboarding && !showStartModal && (
         <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[90]">
           <div
             ref={onboardingModalRef}
