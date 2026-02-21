@@ -3923,19 +3923,19 @@ export default function App() {
       )}
 
       {showStartModal && (
-        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[95]">
+        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-start sm:items-center justify-center z-[95] p-2 sm:p-4">
           <div
             ref={startModalRef}
             role="dialog"
             aria-modal="true"
             aria-label="Start new project"
             tabIndex={-1}
-            className="panel-3d w-[1220px] max-w-[97vw] h-[92vh] max-h-[96vh] border border-white/10 rounded-none p-6 lg:p-8 flex flex-col overflow-hidden"
+            className="panel-3d w-[1220px] max-w-[98vw] h-[96vh] sm:h-[92vh] max-h-[98vh] sm:max-h-[96vh] border border-white/10 rounded-none p-3 sm:p-6 lg:p-8 flex flex-col overflow-hidden"
           >
-            <div className="flex items-center justify-between gap-3">
-              <div>
+            <div className="flex flex-wrap items-start justify-between gap-2 sm:gap-3">
+              <div className="min-w-0">
                 <div className="text-[10px] uppercase tracking-wider text-[#737373]">Start Page</div>
-                <div className="text-xl text-[#fafafa] font-light mt-1">Choose a canvas size</div>
+                <div className="text-base sm:text-xl text-[#fafafa] font-light mt-1 leading-tight">Choose a canvas size</div>
               </div>
               <button
                 type="button"
@@ -3943,14 +3943,14 @@ export default function App() {
                   setIsStartMoreSizesOpen(false);
                   setShowStartModal(false);
                 }}
-                className="h-10 w-10 rounded-none border border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20 transition-colors flex items-center justify-center"
+                className="h-9 w-9 sm:h-10 sm:w-10 rounded-none border border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20 transition-colors flex items-center justify-center"
                 aria-label="Close start page"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            <div className="mt-6 flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-[1.7fr_0.9fr] gap-4 lg:gap-5">
+            <div className="mt-4 sm:mt-6 flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-[1.7fr_0.9fr] gap-3 sm:gap-4 lg:gap-5 overflow-y-auto xl:overflow-hidden">
               <div className="border border-white/10 min-h-0 flex flex-col">
                 <div className="flex items-center gap-2 px-2 py-2 border-b border-white/10 overflow-x-auto">
                   {START_TEMPLATE_TABS.map((tab) => (
@@ -4129,35 +4129,35 @@ export default function App() {
       )}
 
       {showAbout && (
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-start sm:items-center justify-center z-50 p-2 sm:p-4">
           <div
             ref={aboutModalRef}
             role="dialog"
             aria-modal="true"
             aria-label="About Layer"
             tabIndex={-1}
-            className="panel-3d w-[1240px] max-w-[97vw] h-[92vh] max-h-[96vh] bg-[#0a0a0a] border border-white/10 rounded-none p-6 lg:p-8 flex flex-col overflow-hidden"
+            className="panel-3d w-[1240px] max-w-[98vw] h-[96vh] sm:h-[92vh] max-h-[98vh] sm:max-h-[96vh] bg-[#0a0a0a] border border-white/10 rounded-none p-3 sm:p-6 lg:p-8 flex flex-col overflow-hidden"
           >
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-3">
-                <span className="layer-title text-[2rem] font-light tracking-wide leading-[1.02] text-[#fafafa] [text-shadow:0_1px_0_rgba(0,0,0,0.75)]">
+            <div className="flex flex-wrap items-start justify-between gap-2 sm:gap-3 mb-4 sm:mb-5">
+              <div className="flex items-start sm:items-center gap-2 sm:gap-3 min-w-0">
+                <span className="layer-title text-[1.35rem] sm:text-[2rem] font-light tracking-wide leading-[1.05] text-[#fafafa] [text-shadow:0_1px_0_rgba(0,0,0,0.75)]">
                   Layer
                 </span>
-                <div>
+                <div className="min-w-0">
                   <div className="text-[10px] uppercase tracking-wider text-[#737373]">About</div>
-                  <div className="text-lg text-[#fafafa] font-light mt-1">Product Overview</div>
+                  <div className="text-sm sm:text-lg text-[#fafafa] font-light mt-1 leading-tight">Product Overview</div>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowAbout(false)}
-                className="h-10 w-10 rounded-none border border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20 transition-colors flex items-center justify-center"
+                className="h-9 w-9 sm:h-10 sm:w-10 rounded-none border border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20 transition-colors flex items-center justify-center"
                 aria-label="Close about panel"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
-            <div className="flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-[0.75fr_1.25fr] gap-4 lg:gap-5">
+            <div className="flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-[0.75fr_1.25fr] gap-3 sm:gap-4 lg:gap-5 overflow-y-auto xl:overflow-hidden">
               <div className="border border-white/10 p-4 flex flex-col gap-4 min-h-0">
                 <div className="border border-white/10 p-3 space-y-2">
                   <div className="text-[11px] uppercase tracking-wider text-[#bdbdbd]">Layer - Image + Text Editor</div>
@@ -4194,7 +4194,7 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="border border-white/10 min-h-0 overflow-y-auto p-4 space-y-4 text-sm text-[#9a9a9a] leading-relaxed">
+              <div className="border border-white/10 min-h-0 xl:overflow-y-auto p-4 space-y-4 text-sm text-[#9a9a9a] leading-relaxed">
                 <div className="border border-white/10 p-3 space-y-2">
                   <div className="text-[11px] uppercase tracking-wider text-[#bdbdbd]">Canvas + Layers</div>
                   <div>Create, rename, and delete canvases from the left panel. Blank names auto-generate as canvas1, canvas2, and so on.</div>
