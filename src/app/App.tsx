@@ -1380,6 +1380,7 @@ export default function App() {
       description: "",
       altText: "",
       rotation: 0,
+      layerColor: "#2a2a2a",
       invertColors: false,
       motionReduced: false,
     };
@@ -2024,7 +2025,11 @@ export default function App() {
             );
           }
         } else {
-          parts.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="rgba(255,255,255,0.08)"${hasEraseMask ? ` mask="url(#${nodeMaskId})"` : ""} />`);
+          parts.push(
+            `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${escapeXml(
+              node.layerColor ?? "rgba(255,255,255,0.08)"
+            )}"${hasEraseMask ? ` mask="url(#${nodeMaskId})"` : ""} />`
+          );
           parts.push(
             `<text x="${x + w / 2}" y="${y + h / 2}" dominant-baseline="middle" text-anchor="middle" fill="#8a8a8a" font-size="12">${escapeXml(
               node.type
@@ -2238,7 +2243,7 @@ export default function App() {
             ctx.restore();
             continue;
           }
-          nodeCtx.fillStyle = "rgba(255,255,255,0.08)";
+          nodeCtx.fillStyle = node.layerColor ?? "rgba(255,255,255,0.08)";
           nodeCtx.fillRect(0, 0, nodeCanvas.width, nodeCanvas.height);
           nodeCtx.fillStyle = "#8a8a8a";
           nodeCtx.textAlign = "center";
@@ -4654,6 +4659,14 @@ export default function App() {
                           }}
                         />
                       )
+                    ) : node.type === "image" ? (
+                      <div
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          background: node.layerColor ?? "rgba(255,255,255,0.08)",
+                        }}
+                      />
                     ) : node.type === "stroke" ? null : (
                       <div
                         style={{

@@ -395,6 +395,7 @@ export function RightSidebar({
   const [altText, setAltText] = useState(selectedNode.altText ?? "");
   const [opacity, setOpacity] = useState(selectedNode.opacity ?? 1);
   const [invertColors, setInvertColors] = useState(Boolean(selectedNode.invertColors));
+  const [layerColor, setLayerColor] = useState(selectedNode.layerColor ?? "#2a2a2a");
   const [textSize, setTextSize] = useState(selectedNode.textStyle?.fontSize ?? 14);
   const [textBold, setTextBold] = useState(Boolean(selectedNode.textStyle?.bold));
   const [textItalic, setTextItalic] = useState(Boolean(selectedNode.textStyle?.italic));
@@ -419,6 +420,7 @@ export function RightSidebar({
     setAltText(selectedNode.altText ?? "");
     setOpacity(selectedNode.opacity ?? 1);
     setInvertColors(Boolean(selectedNode.invertColors));
+    setLayerColor(selectedNode.layerColor ?? "#2a2a2a");
     setTextSize(selectedNode.textStyle?.fontSize ?? 14);
     setTextBold(Boolean(selectedNode.textStyle?.bold));
     setTextItalic(Boolean(selectedNode.textStyle?.italic));
@@ -624,6 +626,7 @@ export function RightSidebar({
     /\.(png|jpe?g|gif|webp|avif)$/i.test(mediaUrl)
       ? mediaUrl
       : "");
+  const isEmptyImageLayer = selectedNode.type === "image" && !previewSrc;
 
   return (
       <div className="panel-3d inspector-compact w-full lg:w-80 h-full min-h-0 bg-[#0a0a0a] border-l border-white/5 flex flex-col overflow-hidden">
@@ -696,7 +699,15 @@ export function RightSidebar({
                     }}
                   />
                 ) : (
-                  <div className="text-[#737373] text-xs font-light">No thumbnail</div>
+                  <div
+                    className="h-full w-full flex items-center justify-center text-xs font-light"
+                    style={{
+                      color: "#737373",
+                      backgroundColor: isEmptyImageLayer ? layerColor : "transparent",
+                    }}
+                  >
+                    No thumbnail
+                  </div>
                 )}
               </button>
             </>
@@ -1115,6 +1126,54 @@ export function RightSidebar({
                   Flip V
                 </button>
               </div>
+              {isEmptyImageLayer && (
+                <div className="mt-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-[#737373] block font-light">Layer Color</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const dark = "#2a2a2a";
+                        const light = "#cfd2d4";
+                        const next = layerColor.toLowerCase() === dark ? light : dark;
+                        setLayerColor(next);
+                        onUpdateNode(selectedNode.id, { layerColor: next });
+                      }}
+                      className="h-7 px-2 rounded-none border border-white/10 text-[9px] uppercase tracking-wider text-[#737373] hover:text-[#fafafa] hover:border-white/20 transition-colors"
+                    >
+                      Toggle
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={layerColor}
+                      onChange={(event) => {
+                        const next = event.target.value;
+                        setLayerColor(next);
+                        onUpdateNode(selectedNode.id, { layerColor: next });
+                      }}
+                      className="h-8 w-10 rounded-none border border-white/10 bg-transparent p-1 cursor-pointer"
+                      aria-label="Layer color"
+                    />
+                    <input
+                      type="text"
+                      value={layerColor}
+                      onChange={(event) => setLayerColor(event.target.value)}
+                      onBlur={() => {
+                        const normalized = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/.test(layerColor)
+                          ? layerColor
+                          : "#2a2a2a";
+                        setLayerColor(normalized);
+                        onUpdateNode(selectedNode.id, { layerColor: normalized });
+                      }}
+                      className="flex-1 bg-transparent border border-white/10 text-[#fafafa] px-3 py-2 rounded-none text-sm font-light focus:border-white/20 focus:outline-none transition-colors"
+                      placeholder="#2a2a2a"
+                      aria-label="Layer color hex"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

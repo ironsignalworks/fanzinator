@@ -34,6 +34,7 @@ export interface NodeData {
   rotation?: number;
   flipX?: boolean;
   flipY?: boolean;
+  layerColor?: string;
   invertColors?: boolean;
   motionReduced?: boolean;
   textStyle?: NodeTextStyle;
@@ -546,6 +547,13 @@ export function WorldNode({
               }}
             />
           )
+        ) : node.type === "image" ? (
+          <div
+            className="w-full h-full flex items-center justify-center"
+            style={{ backgroundColor: node.layerColor ?? "#2a2a2a" }}
+          >
+            {getNodeIcon()}
+          </div>
         ) : (
           <div className="w-full h-full flex items-center justify-center text-[#737373]">
             {getNodeIcon()}
