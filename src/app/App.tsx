@@ -2881,22 +2881,6 @@ export default function App() {
       )}
       {!isPlaying && (
       <div className="panel-3d print-hide relative flex-shrink-0 min-h-16 px-3 lg:px-0 pt-[max(env(safe-area-inset-top),0.5rem)] pb-2 lg:py-0 flex flex-col lg:flex-row lg:items-center gap-1 border-b border-white/5 bg-[#0a0a0a]">
-        <div className="hidden lg:flex absolute right-0 top-1 w-[20rem] flex-col items-center justify-center gap-1 px-2 py-1.5">
-          <div
-            className="w-full text-center text-[10px] uppercase tracking-[0.08em] text-[#8a8a8a] pointer-events-none"
-            title="Click app name to change skin"
-          >
-            Skin: <span className="text-[#b8b8b8]">{uiSkinLabel}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowAbout(true)}
-            className="control-pill h-7 w-full px-2 border border-white/15 bg-white/[0.02] text-[#9a9a9a] hover:text-[#fafafa] hover:border-white/25 hover:bg-white/[0.06] transition-colors text-[10px] uppercase tracking-wider justify-center"
-          >
-            <Info className="w-3.5 h-3.5" />
-            About
-          </button>
-        </div>
         <div className="flex items-center justify-between lg:basis-[16rem] lg:min-w-[16rem] lg:max-w-[16rem] lg:px-4">
           <div
             onClick={handleCycleUiSkin}
@@ -2940,9 +2924,9 @@ export default function App() {
             </button>
           </div>
         </div>
-        <div className="w-full lg:flex-1 lg:min-w-0 lg:pr-0 lg:mr-[20rem] overflow-hidden">
+        <div className="w-full lg:flex-1 lg:min-w-0 lg:pr-0 overflow-hidden">
           <div className="flex flex-col gap-1 text-xs text-[#737373] w-full max-w-full pb-1 lg:pb-0">
-            <div className="grid grid-cols-3 lg:grid-cols-5 gap-1">
+            <div className="grid grid-cols-3 lg:grid-cols-4 gap-1">
               <div className="control-pill order-1 lg:order-1 w-full min-w-0 border border-white/10 text-[10px] uppercase tracking-wider text-[#737373] flex items-center overflow-hidden">
                 <span className="truncate min-w-0">
                   Back {historyPast.length} | Fwd {historyFuture.length} | {historyLog[0] ?? "Ready"} | {saveStatusLabel}
@@ -3063,14 +3047,22 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setShowAbout(true)}
-                className="control-pill lg:hidden order-10 w-full min-w-0 border border-white/20 bg-white/5 text-[10px] uppercase tracking-wider text-[#fafafa] hover:border-white/30 hover:bg-white/10 transition-colors"
+                className="control-pill order-10 lg:order-8 w-full min-w-0 border border-white/20 bg-white/5 text-[10px] uppercase tracking-wider text-[#fafafa] hover:border-white/30 hover:bg-white/10 transition-colors"
               >
                 <Info />
                 About
               </button>
               <button
+                type="button"
+                onClick={handleCycleUiSkin}
+                className="control-pill order-11 lg:order-11 w-full min-w-0 border border-white/20 bg-white/5 text-[10px] uppercase tracking-wider text-[#fafafa] hover:border-white/30 hover:bg-white/10 transition-colors"
+                aria-label="Cycle interface skin"
+              >
+                Skin: {uiSkinLabel}
+              </button>
+              <button
                 onClick={openExportPanel}
-                className="control-pill order-12 lg:order-2 col-span-3 lg:col-span-1 w-full min-w-0 border border-white/20 bg-white/5 text-[10px] uppercase tracking-wider text-[#fafafa] hover:border-white/30 hover:bg-white/10 transition-colors"
+                className="control-pill order-13 lg:order-2 col-span-3 lg:col-span-1 w-full min-w-0 border border-white/20 bg-white/5 text-[10px] uppercase tracking-wider text-[#fafafa] hover:border-white/30 hover:bg-white/10 transition-colors"
               >
                 <Download />
                 Download
@@ -3082,7 +3074,7 @@ export default function App() {
                 <Printer />
                 Print
               </button>
-              <label className="control-pill order-11 lg:order-8 col-span-3 lg:col-span-1 w-full min-w-0 border border-white/20 text-[10px] uppercase tracking-wider text-[#fafafa] hover:border-white/30 hover:bg-white/10 transition-colors cursor-pointer flex items-center justify-center gap-1 overflow-hidden">
+              <label className="control-pill order-12 lg:order-9 col-span-3 lg:col-span-1 w-full min-w-0 border border-white/20 text-[10px] uppercase tracking-wider text-[#fafafa] hover:border-white/30 hover:bg-white/10 transition-colors cursor-pointer flex items-center justify-center gap-1 overflow-hidden">
                 <Upload className="w-4 h-4" />
                 Import
                 <input
