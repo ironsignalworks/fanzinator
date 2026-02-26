@@ -1704,9 +1704,9 @@ export default function App() {
       y: 0,
       width,
       height,
-      enabled: true,
+      enabled: false,
     });
-    setShowPrintArea(true);
+    setShowPrintArea(false);
     setIsStartMoreSizesOpen(false);
     const nextName = startProjectName.trim();
     if (nextName) {

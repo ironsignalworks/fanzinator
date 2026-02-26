@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { MoveDiagonal2 } from "lucide-react";
+import { Lock, MoveDiagonal2, Unlock } from "lucide-react";
 import { WorldNode, NodeData } from "./world-node";
 
 const LOW_ZOOM_EXPONENT = 2.321928094887362;
@@ -146,6 +146,9 @@ export function WorldCanvas({
     y: 0,
     visible: false,
   });
+  const [isHelperUnlocked, setIsHelperUnlocked] = useState(false);
+  const [helperPosition, setHelperPosition] = useState<{ x: number; y: number } | null>(null);
+  const [isHelperDragging, setIsHelperDragging] = useState(false);
   const strokeActionStartedRef = useRef(false);
   const eraserTargetNodeIdRef = useRef<string | null>(null);
   const eraserPathIdRef = useRef<string | null>(null);
@@ -170,6 +173,9 @@ export function WorldCanvas({
     startCanvasPosition: { x: number; y: number };
   } | null>(null);
   const framePointerIdRef = useRef<number | null>(null);
+  const helperPointerIdRef = useRef<number | null>(null);
+  const helperDragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const helperStartPositionRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const moveFrame = useRef<number | null>(null);
   const pendingMove = useRef<{ id: string; x: number; y: number }[] | null>(null);
   const dragMoved = useRef(false);
@@ -200,6 +206,19 @@ export function WorldCanvas({
     };
   };
   const minFrameSize = 16;
+  const sizeHelperWidth = Math.max(minFrameSize, Math.round(printFrame.width || defaultPrintArea.width || minFrameSize));
+  const sizeHelperHeight = Math.max(minFrameSize, Math.round(printFrame.height || defaultPrintArea.height || minFrameSize));
+  const canvasRect = canvasRef.current?.getBoundingClientRect();
+  const centeredSizeHelperX =
+    canvasRect
+      ? (canvasRect.width / 2 - canvasPosition.x) / zoomScale - sizeHelperWidth / 2
+      : defaultPrintArea.x;
+  const centeredSizeHelperY =
+    canvasRect
+      ? (canvasRect.height / 2 - canvasPosition.y) / zoomScale - sizeHelperHeight / 2
+      : defaultPrintArea.y;
+  const sizeHelperX = isHelperUnlocked ? (helperPosition?.x ?? centeredSizeHelperX) : centeredSizeHelperX;
+  const sizeHelperY = isHelperUnlocked ? (helperPosition?.y ?? centeredSizeHelperY) : centeredSizeHelperY;
   const brushPresetDefaults: Record<"ink" | "marker" | "chalk", { size: number; color: string }> = {
     ink: { size: 3, color: "#fafafa" },
     marker: { size: 6, color: "#fafafa" },
@@ -842,7 +861,31 @@ export function WorldCanvas({
     if (event.deltaY === 0) return;
     event.preventDefault();
     const delta = -event.deltaY / 8;
-    onZoomChange(clampZoom(zoomLevel + delta));
+    const nextZoom = clampZoom(zoomLevel + delta);
+    const nextScale = zoomLevelToScale(nextZoom);
+    const local = getLocalPoint(event.clientX, event.clientY);
+    const worldX = (local.x - canvasPosition.x) / zoomScale;
+    const worldY = (local.y - canvasPosition.y) / zoomScale;
+    onZoomChange(nextZoom);
+    onCanvasPositionChange({
+      x: local.x - worldX * nextScale,
+      y: local.y - worldY * nextScale,
+    });
+  };
+
+  const handleHelperPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!isHelperUnlocked) return;
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    event.stopPropagation();
+    event.preventDefault();
+    helperPointerIdRef.current = event.pointerId;
+    (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
+    setIsHelperDragging(true);
+    helperDragStartRef.current = toCanvasPoint(event.clientX, event.clientY);
+    helperStartPositionRef.current = {
+      x: helperPosition?.x ?? centeredSizeHelperX,
+      y: helperPosition?.y ?? centeredSizeHelperY,
+    };
   };
 
   useEffect(() => {
@@ -932,6 +975,33 @@ export function WorldCanvas({
       window.removeEventListener("pointercancel", handleUp);
     };
   }, [isFrameDragging, isFrameResizing, printFrame, onPrintFrameChange, zoomScale, canvasPosition]);
+
+  useEffect(() => {
+    const handleMove = (event: PointerEvent) => {
+      if (!isHelperDragging) return;
+      if (helperPointerIdRef.current !== null && event.pointerId !== helperPointerIdRef.current) return;
+      const current = toCanvasPoint(event.clientX, event.clientY);
+      const dx = current.x - helperDragStartRef.current.x;
+      const dy = current.y - helperDragStartRef.current.y;
+      setHelperPosition({
+        x: helperStartPositionRef.current.x + dx,
+        y: helperStartPositionRef.current.y + dy,
+      });
+    };
+    const handleUp = (event: PointerEvent) => {
+      if (helperPointerIdRef.current !== null && event.pointerId !== helperPointerIdRef.current) return;
+      helperPointerIdRef.current = null;
+      setIsHelperDragging(false);
+    };
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerup", handleUp);
+    window.addEventListener("pointercancel", handleUp);
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerup", handleUp);
+      window.removeEventListener("pointercancel", handleUp);
+    };
+  }, [isHelperDragging, zoomScale, canvasPosition]);
 
   useEffect(() => {
     const handleWindowPointerDown = () => setToolMenu((prev) => ({ ...prev, visible: false }));
@@ -1316,67 +1386,105 @@ export function WorldCanvas({
         </div>
       </div>
 
-      {(showPrintArea || printFrame.enabled) && (
-        <div className="absolute inset-0 pointer-events-none z-50">
+      <div className="absolute inset-0 pointer-events-none z-50">
+        <div
+          className="absolute inset-0"
+          style={{
+            transform: isPrinting ? "none" : `translate(${canvasPosition.x}px, ${canvasPosition.y}px) scale(${zoomScale})`,
+            transformOrigin: "top left",
+            transition: isDragging ? "none" : "transform 0.2s ease-out",
+          }}
+        >
           <div
-            className="absolute inset-0"
+            className="absolute border border-white/60 bg-white/5"
             style={{
-              transform: isPrinting ? "none" : `translate(${canvasPosition.x}px, ${canvasPosition.y}px) scale(${zoomScale})`,
-              transformOrigin: "top left",
-              transition: isDragging ? "none" : "transform 0.2s ease-out",
+              left: sizeHelperX,
+              top: sizeHelperY,
+              width: sizeHelperWidth,
+              height: sizeHelperHeight,
+              boxShadow: "0 10px 24px rgba(0,0,0,0.25)",
+              pointerEvents: isHelperUnlocked ? "auto" : "none",
+              cursor: isHelperUnlocked ? (isHelperDragging ? "grabbing" : "grab") : "default",
             }}
+            onPointerDown={handleHelperPointerDown}
           >
-            {showPrintArea && (
-              <div
-                className="absolute border border-dashed border-white/45 bg-white/6"
-                style={{
-                  left: defaultPrintArea.x,
-                  top: defaultPrintArea.y,
-                  width: defaultPrintArea.width,
-                  height: defaultPrintArea.height,
-                  boxShadow: "0 10px 24px rgba(0,0,0,0.3)",
-                  pointerEvents: "none",
-                }}
-              >
-                <div className="absolute top-2 left-2 px-2 py-1 border border-white/30 bg-black/45 text-[10px] uppercase tracking-wider text-white/85 pointer-events-none">
-                  PDF Page Area ({printOrientation === "landscape" ? "11 x 8.5" : "8.5 x 11"})
-                </div>
-              </div>
-            )}
-            {printFrame.enabled && (
-              <div
-                className="absolute border border-white/70 bg-white/5"
-                style={{
-                  left: printFrame.x,
-                  top: printFrame.y,
-                  width: printFrame.width,
-                  height: printFrame.height,
-                  boxShadow: "0 0 0 9999px rgba(0,0,0,0.35)",
-                  pointerEvents: "auto",
-                  cursor: isFrameDragging ? "grabbing" : "grab",
-                }}
-                onPointerDown={handleFramePointerDown}
-              >
-                <div className="absolute top-2 left-2 px-2 py-1 border border-white/30 bg-black/45 text-[10px] uppercase tracking-wider text-white/85 pointer-events-none">
-                  Export Snip Area
-                </div>
-                <div
-                  className="absolute bottom-2 right-2 h-5 w-5 border border-white/60 bg-white/25 text-white/90 flex items-center justify-center"
-                  style={{ cursor: "nwse-resize" }}
-                  onPointerDown={handleFrameResizePointerDown}
-                >
-                  <MoveDiagonal2 className="w-3 h-3" />
-                </div>
-              </div>
-            )}
-            {printFrame.enabled && printFrame.width <= 1 && printFrame.height <= 1 && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 px-3 py-2 border border-white/25 bg-black/50 text-[10px] uppercase tracking-wider text-white/85 pointer-events-none">
-                Click and drag to draw export snip area
-              </div>
-            )}
+            <div className="absolute top-2 left-2 px-2 py-1 border border-white/30 bg-black/45 text-[10px] uppercase tracking-wider text-white/85 pointer-events-none">
+              Size Helper ({sizeHelperWidth} x {sizeHelperHeight})
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setIsHelperUnlocked((prev) => {
+                const next = !prev;
+                if (next && !helperPosition) {
+                  setHelperPosition({ x: centeredSizeHelperX, y: centeredSizeHelperY });
+                }
+                return next;
+              });
+            }}
+            className="absolute h-6 w-6 border border-white/40 bg-black/70 text-white/90 hover:border-white/60 hover:text-white transition-colors flex items-center justify-center pointer-events-auto"
+            style={{
+              left: sizeHelperX + sizeHelperWidth - 12,
+              top: sizeHelperY + sizeHelperHeight - 12,
+            }}
+            aria-label={isHelperUnlocked ? "Lock size helper position" : "Unlock size helper position"}
+            title={isHelperUnlocked ? "Lock helper" : "Unlock helper"}
+          >
+            {isHelperUnlocked ? <Unlock className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
+          </button>
+          {showPrintArea && (
+            <div
+              className="absolute border border-dashed border-white/45 bg-white/6"
+              style={{
+                left: defaultPrintArea.x,
+                top: defaultPrintArea.y,
+                width: defaultPrintArea.width,
+                height: defaultPrintArea.height,
+                boxShadow: "0 10px 24px rgba(0,0,0,0.3)",
+                pointerEvents: "none",
+              }}
+            >
+              <div className="absolute top-2 left-2 px-2 py-1 border border-white/30 bg-black/45 text-[10px] uppercase tracking-wider text-white/85 pointer-events-none">
+                PDF Page Area ({printOrientation === "landscape" ? "11 x 8.5" : "8.5 x 11"})
+              </div>
+            </div>
+          )}
+          {printFrame.enabled && (
+            <div
+              className="absolute border border-white/70 bg-white/5"
+              style={{
+                left: printFrame.x,
+                top: printFrame.y,
+                width: printFrame.width,
+                height: printFrame.height,
+                boxShadow: "0 0 0 9999px rgba(0,0,0,0.35)",
+                pointerEvents: "auto",
+                cursor: isFrameDragging ? "grabbing" : "grab",
+              }}
+              onPointerDown={handleFramePointerDown}
+            >
+              <div className="absolute top-2 left-2 px-2 py-1 border border-white/30 bg-black/45 text-[10px] uppercase tracking-wider text-white/85 pointer-events-none">
+                Export Snip Area
+              </div>
+              <div
+                className="absolute bottom-2 right-2 h-5 w-5 border border-white/60 bg-white/25 text-white/90 flex items-center justify-center"
+                style={{ cursor: "nwse-resize" }}
+                onPointerDown={handleFrameResizePointerDown}
+              >
+                <MoveDiagonal2 className="w-3 h-3" />
+              </div>
+            </div>
+          )}
+          {printFrame.enabled && printFrame.width <= 1 && printFrame.height <= 1 && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 px-3 py-2 border border-white/25 bg-black/50 text-[10px] uppercase tracking-wider text-white/85 pointer-events-none">
+              Click and drag to draw export snip area
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
