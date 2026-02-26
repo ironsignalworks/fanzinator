@@ -3016,7 +3016,7 @@ export default function App() {
         </div>
         <div className="w-full lg:flex-1 lg:min-w-0 lg:pr-0 overflow-hidden">
           <div className="flex flex-col gap-1 text-xs text-[#737373] w-full max-w-full pb-1 lg:pb-0">
-            <div className="grid grid-cols-3 lg:grid-cols-4 gap-1">
+            <div className="grid grid-cols-3 lg:grid-cols-5 gap-1">
               <div className="control-pill order-1 lg:order-1 w-full min-w-0 border border-white/10 text-[10px] uppercase tracking-wider text-[#737373] flex items-center overflow-hidden">
                 <span className="truncate min-w-0">
                   Back {historyPast.length} | Fwd {historyFuture.length} | {historyLog[0] ?? "Ready"} | {saveStatusLabel}
@@ -3119,7 +3119,7 @@ export default function App() {
               <button
                 onClick={handleUndo}
                 disabled={historyPast.length === 0}
-                className="control-pill order-8 lg:order-6 w-full min-w-0 border border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="control-pill order-9 lg:order-7 w-full min-w-0 border border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 aria-label="Undo"
               >
                 <RotateCcw />
@@ -3128,7 +3128,7 @@ export default function App() {
               <button
                 onClick={handleRedo}
                 disabled={historyFuture.length === 0}
-                className="control-pill order-9 lg:order-7 w-full min-w-0 border border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="control-pill order-10 lg:order-8 w-full min-w-0 border border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 aria-label="Redo"
               >
                 <RotateCw />
@@ -3137,7 +3137,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setShowAbout(true)}
-                className="control-pill order-10 lg:order-8 w-full min-w-0 border border-white/20 bg-white/5 text-[10px] uppercase tracking-wider text-[#fafafa] hover:border-white/30 hover:bg-white/10 transition-colors"
+                className="control-pill order-11 lg:order-11 w-full min-w-0 border border-white/20 bg-white/5 text-[10px] uppercase tracking-wider text-[#fafafa] hover:border-white/30 hover:bg-white/10 transition-colors"
               >
                 <Info />
                 About
@@ -3145,17 +3145,10 @@ export default function App() {
               <button
                 type="button"
                 onClick={handleCycleUiSkin}
-                className="control-pill order-11 lg:order-11 w-full min-w-0 border border-white/20 bg-white/5 text-[10px] uppercase tracking-wider text-[#fafafa] hover:border-white/30 hover:bg-white/10 transition-colors"
+                className="control-pill order-8 lg:order-6 w-full min-w-0 border border-white/20 bg-white/5 text-[10px] uppercase tracking-wider text-[#fafafa] hover:border-white/30 hover:bg-white/10 transition-colors"
                 aria-label="Cycle interface skin"
               >
                 Skin: {uiSkinLabel}
-              </button>
-              <button
-                onClick={openExportPanel}
-                className="control-pill order-13 lg:order-2 col-span-3 lg:col-span-1 w-full min-w-0 border border-white/20 bg-white/5 text-[10px] uppercase tracking-wider text-[#fafafa] hover:border-white/30 hover:bg-white/10 transition-colors"
-              >
-                <Download />
-                Download
               </button>
               <button
                 onClick={handlePrintCanvas}
@@ -3229,6 +3222,7 @@ export default function App() {
             onAddTextLayer={handleAddTextLayer}
             onImportFont={handleImportFont}
             onImportFile={handleHeaderUpload}
+            onDownload={openExportPanel}
             zoomLevel={zoomLevel}
             onZoomChange={handleZoomChange}
           />
@@ -3400,6 +3394,7 @@ export default function App() {
                 onAddTextLayer={handleAddTextLayer}
                 onImportFont={handleImportFont}
                 onImportFile={handleHeaderUpload}
+                onDownload={openExportPanel}
                 zoomLevel={zoomLevel}
                 onZoomChange={handleZoomChange}
               />

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Layers, ChevronDown, Plus, Type, Pencil, Trash2, Eye, EyeOff, Eraser, MousePointer2, Upload, ZoomIn, Image as ImageIcon } from "lucide-react";
+import { Layers, ChevronDown, Plus, Type, Pencil, Trash2, Eye, EyeOff, Eraser, MousePointer2, Upload, ZoomIn, Image as ImageIcon, Download } from "lucide-react";
 import { ScrollArea } from "../components/ui/scroll-area";
 
 interface LeftSidebarProps {
@@ -28,6 +28,7 @@ interface LeftSidebarProps {
   onAddTextLayer: () => void;
   onImportFont: (file: File) => void;
   onImportFile: (file: File) => Promise<void> | void;
+  onDownload: () => void;
   zoomLevel: number;
   onZoomChange: (nextZoom: number) => void;
 }
@@ -58,6 +59,7 @@ export function LeftSidebar({
   onAddTextLayer,
   onImportFont,
   onImportFile,
+  onDownload,
   zoomLevel,
   onZoomChange,
 }: LeftSidebarProps) {
@@ -146,6 +148,14 @@ export function LeftSidebar({
             }}
           />
         </label>
+        <button
+          type="button"
+          onClick={onDownload}
+          className="control-pill mb-2 w-full h-10 border border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20 text-[10px] uppercase tracking-wider rounded-none transition-colors flex items-center justify-center gap-1 overflow-hidden"
+        >
+          <Download />
+          Download
+        </button>
         <>
           <div className="relative w-full overflow-visible z-20" ref={canvasMenuRef}>
             {isRenaming ? (
