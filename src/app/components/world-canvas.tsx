@@ -57,6 +57,7 @@ interface WorldCanvasProps {
   gridSize: number;
   alignThreshold: number;
   snapStrength: number;
+  onSizeHelperBoundsChange?: (next: { x: number; y: number; width: number; height: number }) => void;
 }
 
 export function WorldCanvas({
@@ -112,6 +113,7 @@ export function WorldCanvas({
   gridSize,
   alignThreshold,
   snapStrength,
+  onSizeHelperBoundsChange,
 }: WorldCanvasProps) {
   const [isPrinting, setIsPrinting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -975,6 +977,15 @@ export function WorldCanvas({
   };
 
   useEffect(() => {
+    onSizeHelperBoundsChange?.({
+      x: sizeHelperX,
+      y: sizeHelperY,
+      width: sizeHelperWidth,
+      height: sizeHelperHeight,
+    });
+  }, [onSizeHelperBoundsChange, sizeHelperX, sizeHelperY, sizeHelperWidth, sizeHelperHeight]);
+
+  useEffect(() => {
     zoomLevelRef.current = zoomLevel;
   }, [zoomLevel]);
 
@@ -1193,6 +1204,28 @@ export function WorldCanvas({
           transition: isDragging ? "none" : "transform 0.2s ease-out",
         }}
       >
+        {showSizeHelper && (
+          <div
+            className="absolute border border-white/60 bg-white/5"
+            style={{
+              left: sizeHelperX,
+              top: sizeHelperY,
+              width: sizeHelperWidth,
+              height: sizeHelperHeight,
+              boxShadow: "0 10px 24px rgba(0,0,0,0.25)",
+              background: backgroundColor,
+              pointerEvents: "auto",
+              cursor: isHelperDragging ? "grabbing" : "grab",
+              zIndex: -1,
+            }}
+            onPointerDown={handleHelperPointerDown}
+          >
+            <div className="absolute top-2 left-2 px-2 py-1 border border-white/30 bg-black/45 text-[10px] uppercase tracking-wider text-white/85 pointer-events-none">
+              Size Helper ({sizeHelperWidth} x {sizeHelperHeight})
+            </div>
+          </div>
+        )}
+
         {/* Nodes */}
         {nodes.map((node, index) => (
           <WorldNode
@@ -1527,28 +1560,6 @@ export function WorldCanvas({
             transition: isDragging ? "none" : "transform 0.2s ease-out",
           }}
         >
-          {showSizeHelper && (
-            <>
-              <div
-                className="absolute border border-white/60 bg-white/5"
-                style={{
-                  left: sizeHelperX,
-                  top: sizeHelperY,
-                  width: sizeHelperWidth,
-                  height: sizeHelperHeight,
-                  boxShadow: "0 10px 24px rgba(0,0,0,0.25)",
-                  background: backgroundColor,
-                  pointerEvents: "auto",
-                  cursor: isHelperDragging ? "grabbing" : "grab",
-                }}
-                onPointerDown={handleHelperPointerDown}
-              >
-                <div className="absolute top-2 left-2 px-2 py-1 border border-white/30 bg-black/45 text-[10px] uppercase tracking-wider text-white/85 pointer-events-none">
-                  Size Helper ({sizeHelperWidth} x {sizeHelperHeight})
-                </div>
-              </div>
-            </>
-          )}
           {showPrintArea && !showSizeHelper && (
             <div
               className="absolute border border-dashed border-white/45 bg-white/6"

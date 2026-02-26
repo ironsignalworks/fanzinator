@@ -666,6 +666,12 @@ export default function App() {
   const [showExport, setShowExport] = useState(false);
   const [showPrintArea, setShowPrintArea] = useState(true);
   const [showSizeHelper, setShowSizeHelper] = useState(true);
+  const [sizeHelperBounds, setSizeHelperBounds] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const [isPrinting, setIsPrinting] = useState(false);
   const [printLayout, setPrintLayout] = useState<{ offsetX: number; offsetY: number; scale: number } | null>(null);
   const [canvasPosition, setCanvasPosition] = useState({ x: 0, y: 0 });
@@ -1588,6 +1594,14 @@ export default function App() {
     (currentCanvas?.nodes ?? []).filter((node) => node.visible !== false);
 
   const getExportBounds = (nodes: NodeData[]) => {
+    if (showSizeHelper && sizeHelperBounds) {
+      return {
+        minX: sizeHelperBounds.x,
+        minY: sizeHelperBounds.y,
+        width: Math.max(1, sizeHelperBounds.width),
+        height: Math.max(1, sizeHelperBounds.height),
+      };
+    }
     if (printFrame.enabled) {
       return {
         minX: printFrame.x,
@@ -1629,6 +1643,16 @@ export default function App() {
     }
     setShowExport(true);
   };
+
+  useEffect(() => {
+    if (!showSizeHelper || !sizeHelperBounds) return;
+    const helperWidth = Math.max(16, Math.round(sizeHelperBounds.width));
+    const helperHeight = Math.max(16, Math.round(sizeHelperBounds.height));
+    setExportTemplate("custom");
+    setExportWidth((prev) => (prev === helperWidth ? prev : helperWidth));
+    setExportHeight((prev) => (prev === helperHeight ? prev : helperHeight));
+    exportAspectRatioRef.current = helperWidth / Math.max(1, helperHeight);
+  }, [showSizeHelper, sizeHelperBounds]);
 
   const handleToggleExportAutoScale = () => {
     setExportAutoScale((prev) => {
@@ -2284,8 +2308,14 @@ export default function App() {
         return;
       }
       const bounds = getExportBounds(nodes);
-      const width = Math.max(16, Math.round(exportWidth));
-      const height = Math.max(16, Math.round(exportHeight));
+      const width =
+        showSizeHelper && sizeHelperBounds
+          ? Math.max(16, Math.round(sizeHelperBounds.width))
+          : Math.max(16, Math.round(exportWidth));
+      const height =
+        showSizeHelper && sizeHelperBounds
+          ? Math.max(16, Math.round(sizeHelperBounds.height))
+          : Math.max(16, Math.round(exportHeight));
       const renderWidth = width * exportScale;
       const renderHeight = height * exportScale;
       const fileBase = (currentCanvas.name || "canvas").trim().toLowerCase().replace(/\s+/g, "-") || "canvas";
@@ -2425,8 +2455,14 @@ export default function App() {
       setExportEstimatedBytes(null);
       return;
     }
-    const width = Math.max(16, Math.round(exportWidth));
-    const height = Math.max(16, Math.round(exportHeight));
+    const width =
+      showSizeHelper && sizeHelperBounds
+        ? Math.max(16, Math.round(sizeHelperBounds.width))
+        : Math.max(16, Math.round(exportWidth));
+    const height =
+      showSizeHelper && sizeHelperBounds
+        ? Math.max(16, Math.round(sizeHelperBounds.height))
+        : Math.max(16, Math.round(exportHeight));
     const fullWidth = width * exportScale;
     const fullHeight = height * exportScale;
     const longestSide = Math.max(fullWidth, fullHeight);
@@ -2493,6 +2529,11 @@ export default function App() {
     exportIncludeFilters,
     exportFinalPass,
     exportFinalPassAmount,
+    showSizeHelper,
+    sizeHelperBounds?.x,
+    sizeHelperBounds?.y,
+    sizeHelperBounds?.width,
+    sizeHelperBounds?.height,
     printFrame.enabled,
     printFrame.x,
     printFrame.y,
@@ -3245,6 +3286,7 @@ export default function App() {
                     showPrintArea={showPrintArea}
                     showSizeHelper={showSizeHelper}
                     onToggleSizeHelper={() => setShowSizeHelper((prev) => !prev)}
+                    onSizeHelperBoundsChange={setSizeHelperBounds}
                     canvasPreset={currentCanvas.canvasPreset}
                     backgroundColor={currentCanvas.backgroundColor}
                     snapToGrid={currentCanvas.snapEnabled}
