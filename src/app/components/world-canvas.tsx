@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Lock, MoveDiagonal2, Unlock } from "lucide-react";
+import { Frame, MoveDiagonal2 } from "lucide-react";
 import { WorldNode, NodeData } from "./world-node";
 
 const LOW_ZOOM_EXPONENT = 2.321928094887362;
@@ -49,6 +49,8 @@ interface WorldCanvasProps {
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
   showPrintArea: boolean;
+  showSizeHelper: boolean;
+  onToggleSizeHelper: () => void;
   backgroundColor: string;
   canvasPreset: "zine" | "acid" | "retro" | "mono" | "neon" | "paper" | "none";
   snapToGrid: boolean;
@@ -102,6 +104,8 @@ export function WorldCanvas({
   isFullscreen,
   onToggleFullscreen,
   showPrintArea,
+  showSizeHelper,
+  onToggleSizeHelper,
   backgroundColor,
   canvasPreset,
   snapToGrid,
@@ -146,7 +150,6 @@ export function WorldCanvas({
     y: 0,
     visible: false,
   });
-  const [isHelperUnlocked, setIsHelperUnlocked] = useState(false);
   const [helperPosition, setHelperPosition] = useState<{ x: number; y: number } | null>(null);
   const [isHelperDragging, setIsHelperDragging] = useState(false);
   const strokeActionStartedRef = useRef(false);
@@ -176,6 +179,8 @@ export function WorldCanvas({
   const helperPointerIdRef = useRef<number | null>(null);
   const helperDragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const helperStartPositionRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const zoomLevelRef = useRef(zoomLevel);
+  const canvasPositionRef = useRef(canvasPosition);
   const moveFrame = useRef<number | null>(null);
   const pendingMove = useRef<{ id: string; x: number; y: number }[] | null>(null);
   const dragMoved = useRef(false);
@@ -206,6 +211,7 @@ export function WorldCanvas({
     };
   };
   const minFrameSize = 16;
+  const helperSnapThreshold = Math.max(8, effectiveAlign * 1.5);
   const sizeHelperWidth = Math.max(minFrameSize, Math.round(printFrame.width || defaultPrintArea.width || minFrameSize));
   const sizeHelperHeight = Math.max(minFrameSize, Math.round(printFrame.height || defaultPrintArea.height || minFrameSize));
   const canvasRect = canvasRef.current?.getBoundingClientRect();
@@ -217,8 +223,96 @@ export function WorldCanvas({
     canvasRect
       ? (canvasRect.height / 2 - canvasPosition.y) / zoomScale - sizeHelperHeight / 2
       : defaultPrintArea.y;
-  const sizeHelperX = isHelperUnlocked ? (helperPosition?.x ?? centeredSizeHelperX) : centeredSizeHelperX;
-  const sizeHelperY = isHelperUnlocked ? (helperPosition?.y ?? centeredSizeHelperY) : centeredSizeHelperY;
+  const sizeHelperX = helperPosition?.x ?? centeredSizeHelperX;
+  const sizeHelperY = helperPosition?.y ?? centeredSizeHelperY;
+  const canvasBackgroundDisplay = showSizeHelper ? "#121212" : backgroundColor;
+  const viewCenterX = canvasRect ? (canvasRect.width / 2 - canvasPosition.x) / zoomScale : null;
+  const viewCenterY = canvasRect ? (canvasRect.height / 2 - canvasPosition.y) / zoomScale : null;
+  const snapValue = (value: number, candidates: number[], threshold: number) => {
+    let best = value;
+    let bestDiff = threshold + 0.0001;
+    for (const candidate of candidates) {
+      if (!Number.isFinite(candidate)) continue;
+      const diff = Math.abs(value - candidate);
+      if (diff <= threshold && diff < bestDiff) {
+        best = candidate;
+        bestDiff = diff;
+      }
+    }
+    return best;
+  };
+  const buildXPositionCandidates = (width: number) => {
+    const areaCenterX = defaultPrintArea.x + defaultPrintArea.width / 2;
+    const helperCenterX = sizeHelperX + sizeHelperWidth / 2;
+    const frameCenterX = printFrame.x + printFrame.width / 2;
+    const candidates = [
+      defaultPrintArea.x,
+      defaultPrintArea.x + defaultPrintArea.width - width,
+      areaCenterX - width / 2,
+      showSizeHelper ? sizeHelperX : NaN,
+      showSizeHelper ? sizeHelperX + sizeHelperWidth - width : NaN,
+      showSizeHelper ? helperCenterX - width / 2 : NaN,
+      printFrame.enabled ? printFrame.x : NaN,
+      printFrame.enabled ? printFrame.x + printFrame.width - width : NaN,
+      printFrame.enabled ? frameCenterX - width / 2 : NaN,
+      viewCenterX !== null ? viewCenterX - width / 2 : NaN,
+    ];
+    return candidates.filter((candidate) => Number.isFinite(candidate));
+  };
+  const buildYPositionCandidates = (height: number) => {
+    const areaCenterY = defaultPrintArea.y + defaultPrintArea.height / 2;
+    const helperCenterY = sizeHelperY + sizeHelperHeight / 2;
+    const frameCenterY = printFrame.y + printFrame.height / 2;
+    const candidates = [
+      defaultPrintArea.y,
+      defaultPrintArea.y + defaultPrintArea.height - height,
+      areaCenterY - height / 2,
+      showSizeHelper ? sizeHelperY : NaN,
+      showSizeHelper ? sizeHelperY + sizeHelperHeight - height : NaN,
+      showSizeHelper ? helperCenterY - height / 2 : NaN,
+      printFrame.enabled ? printFrame.y : NaN,
+      printFrame.enabled ? printFrame.y + printFrame.height - height : NaN,
+      printFrame.enabled ? frameCenterY - height / 2 : NaN,
+      viewCenterY !== null ? viewCenterY - height / 2 : NaN,
+    ];
+    return candidates.filter((candidate) => Number.isFinite(candidate));
+  };
+  const buildRightEdgeCandidates = () => {
+    const areaCenterX = defaultPrintArea.x + defaultPrintArea.width / 2;
+    const helperCenterX = sizeHelperX + sizeHelperWidth / 2;
+    const frameCenterX = printFrame.x + printFrame.width / 2;
+    const candidates = [
+      defaultPrintArea.x,
+      defaultPrintArea.x + defaultPrintArea.width,
+      areaCenterX,
+      showSizeHelper ? sizeHelperX : NaN,
+      showSizeHelper ? sizeHelperX + sizeHelperWidth : NaN,
+      showSizeHelper ? helperCenterX : NaN,
+      printFrame.enabled ? printFrame.x : NaN,
+      printFrame.enabled ? printFrame.x + printFrame.width : NaN,
+      printFrame.enabled ? frameCenterX : NaN,
+      viewCenterX ?? NaN,
+    ];
+    return candidates.filter((candidate) => Number.isFinite(candidate));
+  };
+  const buildBottomEdgeCandidates = () => {
+    const areaCenterY = defaultPrintArea.y + defaultPrintArea.height / 2;
+    const helperCenterY = sizeHelperY + sizeHelperHeight / 2;
+    const frameCenterY = printFrame.y + printFrame.height / 2;
+    const candidates = [
+      defaultPrintArea.y,
+      defaultPrintArea.y + defaultPrintArea.height,
+      areaCenterY,
+      showSizeHelper ? sizeHelperY : NaN,
+      showSizeHelper ? sizeHelperY + sizeHelperHeight : NaN,
+      showSizeHelper ? helperCenterY : NaN,
+      printFrame.enabled ? printFrame.y : NaN,
+      printFrame.enabled ? printFrame.y + printFrame.height : NaN,
+      printFrame.enabled ? frameCenterY : NaN,
+      viewCenterY ?? NaN,
+    ];
+    return candidates.filter((candidate) => Number.isFinite(candidate));
+  };
   const brushPresetDefaults: Record<"ink" | "marker" | "chalk", { size: number; color: string }> = {
     ink: { size: 3, color: "#fafafa" },
     marker: { size: 6, color: "#fafafa" },
@@ -860,21 +954,35 @@ export function WorldCanvas({
   const handleWheel = (event: React.WheelEvent) => {
     if (event.deltaY === 0) return;
     event.preventDefault();
-    const delta = -event.deltaY / 8;
-    const nextZoom = clampZoom(zoomLevel + delta);
+    const currentZoom = zoomLevelRef.current;
+    const currentCanvasPosition = canvasPositionRef.current;
+    const deltaFactor = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 240 : 1;
+    const delta = -(event.deltaY * deltaFactor) / 8;
+    const nextZoom = clampZoom(currentZoom + delta);
     const nextScale = zoomLevelToScale(nextZoom);
     const local = getLocalPoint(event.clientX, event.clientY);
-    const worldX = (local.x - canvasPosition.x) / zoomScale;
-    const worldY = (local.y - canvasPosition.y) / zoomScale;
-    onZoomChange(nextZoom);
-    onCanvasPositionChange({
+    const currentScale = zoomLevelToScale(currentZoom);
+    const worldX = (local.x - currentCanvasPosition.x) / currentScale;
+    const worldY = (local.y - currentCanvasPosition.y) / currentScale;
+    const nextCanvasPosition = {
       x: local.x - worldX * nextScale,
       y: local.y - worldY * nextScale,
-    });
+    };
+    zoomLevelRef.current = nextZoom;
+    canvasPositionRef.current = nextCanvasPosition;
+    onZoomChange(nextZoom);
+    onCanvasPositionChange(nextCanvasPosition);
   };
 
+  useEffect(() => {
+    zoomLevelRef.current = zoomLevel;
+  }, [zoomLevel]);
+
+  useEffect(() => {
+    canvasPositionRef.current = canvasPosition;
+  }, [canvasPosition]);
+
   const handleHelperPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!isHelperUnlocked) return;
     if (event.pointerType === "mouse" && event.button !== 0) return;
     event.stopPropagation();
     event.preventDefault();
@@ -942,10 +1050,22 @@ export function WorldCanvas({
         const start = toCanvasPoint(frameMouseStart.current.x, frameMouseStart.current.y);
         const dx = delta.x - start.x;
         const dy = delta.y - start.y;
+        const nextXRaw = frameStart.current.x + dx;
+        const nextYRaw = frameStart.current.y + dy;
+        const nextX = snapValue(
+          nextXRaw,
+          buildXPositionCandidates(frameStart.current.width),
+          helperSnapThreshold
+        );
+        const nextY = snapValue(
+          nextYRaw,
+          buildYPositionCandidates(frameStart.current.height),
+          helperSnapThreshold
+        );
         onPrintFrameChange({
           ...printFrame,
-          x: frameStart.current.x + dx,
-          y: frameStart.current.y + dy,
+          x: nextX,
+          y: nextY,
         });
       }
       if (isFrameResizing) {
@@ -953,10 +1073,14 @@ export function WorldCanvas({
         const start = toCanvasPoint(frameMouseStart.current.x, frameMouseStart.current.y);
         const dx = delta.x - start.x;
         const dy = delta.y - start.y;
+        const rawRight = frameStart.current.x + frameStart.current.width + dx;
+        const rawBottom = frameStart.current.y + frameStart.current.height + dy;
+        const snappedRight = snapValue(rawRight, buildRightEdgeCandidates(), helperSnapThreshold);
+        const snappedBottom = snapValue(rawBottom, buildBottomEdgeCandidates(), helperSnapThreshold);
         onPrintFrameChange({
           ...printFrame,
-          width: Math.max(minFrameSize, frameStart.current.width + dx),
-          height: Math.max(minFrameSize, frameStart.current.height + dy),
+          width: Math.max(minFrameSize, snappedRight - frameStart.current.x),
+          height: Math.max(minFrameSize, snappedBottom - frameStart.current.y),
         });
       }
     };
@@ -983,9 +1107,13 @@ export function WorldCanvas({
       const current = toCanvasPoint(event.clientX, event.clientY);
       const dx = current.x - helperDragStartRef.current.x;
       const dy = current.y - helperDragStartRef.current.y;
+      const rawX = helperStartPositionRef.current.x + dx;
+      const rawY = helperStartPositionRef.current.y + dy;
+      const snappedX = snapValue(rawX, buildXPositionCandidates(sizeHelperWidth), helperSnapThreshold);
+      const snappedY = snapValue(rawY, buildYPositionCandidates(sizeHelperHeight), helperSnapThreshold);
       setHelperPosition({
-        x: helperStartPositionRef.current.x + dx,
-        y: helperStartPositionRef.current.y + dy,
+        x: snappedX,
+        y: snappedY,
       });
     };
     const handleUp = (event: PointerEvent) => {
@@ -1033,7 +1161,7 @@ export function WorldCanvas({
       } ${
         canvasPreset !== "none" ? `canvas-preset-${canvasPreset}` : ""
       }`}
-      style={{ background: backgroundColor, touchAction: "none" }}
+      style={{ background: canvasBackgroundDisplay, touchAction: "none" }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={(event) => handlePointerUp(event.pointerId)}
@@ -1171,14 +1299,6 @@ export function WorldCanvas({
           }}
         />
       )}
-
-      {/* Subtle vignette */}
-      <div
-        className="absolute inset-0 pointer-events-none canvas-bg"
-        style={{
-          background: "radial-gradient(circle at center, transparent 50%, rgba(10, 10, 10, 0.4) 100%)",
-        }}
-      />
 
       {toolCursor.visible && (activeTool === "brush" || activeTool === "eraser") && (
         <div
@@ -1358,6 +1478,18 @@ export function WorldCanvas({
 
       <div className="absolute top-4 right-4 pointer-events-auto z-50">
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onToggleSizeHelper}
+            className={`h-8 px-2 rounded-none border text-[10px] uppercase tracking-wider transition-colors ${
+              showSizeHelper
+                ? "border-white/40 bg-black/65 text-white"
+                : "border-white/25 bg-black/55 text-white/80 hover:border-white/45 hover:text-white"
+            }`}
+          >
+            <Frame className="w-3.5 h-3.5" />
+            {showSizeHelper ? "Helper On" : "Helper Off"}
+          </button>
           {(showPrintArea || printFrame.enabled) && (
             <button
               type="button"
@@ -1395,47 +1527,29 @@ export function WorldCanvas({
             transition: isDragging ? "none" : "transform 0.2s ease-out",
           }}
         >
-          <div
-            className="absolute border border-white/60 bg-white/5"
-            style={{
-              left: sizeHelperX,
-              top: sizeHelperY,
-              width: sizeHelperWidth,
-              height: sizeHelperHeight,
-              boxShadow: "0 10px 24px rgba(0,0,0,0.25)",
-              pointerEvents: isHelperUnlocked ? "auto" : "none",
-              cursor: isHelperUnlocked ? (isHelperDragging ? "grabbing" : "grab") : "default",
-            }}
-            onPointerDown={handleHelperPointerDown}
-          >
-            <div className="absolute top-2 left-2 px-2 py-1 border border-white/30 bg-black/45 text-[10px] uppercase tracking-wider text-white/85 pointer-events-none">
-              Size Helper ({sizeHelperWidth} x {sizeHelperHeight})
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              setIsHelperUnlocked((prev) => {
-                const next = !prev;
-                if (next && !helperPosition) {
-                  setHelperPosition({ x: centeredSizeHelperX, y: centeredSizeHelperY });
-                }
-                return next;
-              });
-            }}
-            className="absolute h-6 w-6 border border-white/40 bg-black/70 text-white/90 hover:border-white/60 hover:text-white transition-colors flex items-center justify-center pointer-events-auto"
-            style={{
-              left: sizeHelperX + sizeHelperWidth - 12,
-              top: sizeHelperY + sizeHelperHeight - 12,
-            }}
-            aria-label={isHelperUnlocked ? "Lock size helper position" : "Unlock size helper position"}
-            title={isHelperUnlocked ? "Lock helper" : "Unlock helper"}
-          >
-            {isHelperUnlocked ? <Unlock className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
-          </button>
-          {showPrintArea && (
+          {showSizeHelper && (
+            <>
+              <div
+                className="absolute border border-white/60 bg-white/5"
+                style={{
+                  left: sizeHelperX,
+                  top: sizeHelperY,
+                  width: sizeHelperWidth,
+                  height: sizeHelperHeight,
+                  boxShadow: "0 10px 24px rgba(0,0,0,0.25)",
+                  background: backgroundColor,
+                  pointerEvents: "auto",
+                  cursor: isHelperDragging ? "grabbing" : "grab",
+                }}
+                onPointerDown={handleHelperPointerDown}
+              >
+                <div className="absolute top-2 left-2 px-2 py-1 border border-white/30 bg-black/45 text-[10px] uppercase tracking-wider text-white/85 pointer-events-none">
+                  Size Helper ({sizeHelperWidth} x {sizeHelperHeight})
+                </div>
+              </div>
+            </>
+          )}
+          {showPrintArea && !showSizeHelper && (
             <div
               className="absolute border border-dashed border-white/45 bg-white/6"
               style={{

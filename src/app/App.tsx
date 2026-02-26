@@ -665,6 +665,7 @@ export default function App() {
   const [showAbout, setShowAbout] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [showPrintArea, setShowPrintArea] = useState(true);
+  const [showSizeHelper, setShowSizeHelper] = useState(true);
   const [isPrinting, setIsPrinting] = useState(false);
   const [printLayout, setPrintLayout] = useState<{ offsetX: number; offsetY: number; scale: number } | null>(null);
   const [canvasPosition, setCanvasPosition] = useState({ x: 0, y: 0 });
@@ -1281,7 +1282,9 @@ export default function App() {
     recordHistory();
     setCanvases((prev) =>
       prev.map((canvas) =>
-        canvas.id === currentCanvasId ? { ...canvas, backgroundColor: color } : canvas
+        canvas.id === currentCanvasId
+          ? { ...canvas, backgroundColor: color, canvasPreset: "none" }
+          : canvas
       )
     );
   };
@@ -3120,23 +3123,19 @@ export default function App() {
                 <Printer />
                 Print
               </button>
-              <label className="control-pill order-12 lg:order-9 col-span-3 lg:col-span-1 w-full min-w-0 border border-white/20 text-[10px] uppercase tracking-wider text-[#fafafa] hover:border-white/30 hover:bg-white/10 transition-colors cursor-pointer flex items-center justify-center gap-1 overflow-hidden">
-                <Upload className="w-4 h-4" />
-                Import
-                <input
-                  ref={importFileInputRef}
-                  type="file"
-                  accept="image/*,text/plain,application/json,.csv,.md"
-                  className="hidden"
-                  onChange={async (event) => {
-                    const file = event.target.files?.[0];
-                    if (!file) return;
-                    await handleHeaderUpload(file);
-                    event.currentTarget.value = "";
-                  }}
-                />
-              </label>
             </div>
+            <input
+              ref={importFileInputRef}
+              type="file"
+              accept="image/*,text/plain,application/json,.csv,.md"
+              className="hidden"
+              onChange={async (event) => {
+                const file = event.target.files?.[0];
+                if (!file) return;
+                await handleHeaderUpload(file);
+                event.currentTarget.value = "";
+              }}
+            />
             {saveStatus === "error" && saveErrorMessage && (
               <div className="text-[10px] uppercase tracking-wider text-[#d9a66f]" aria-live="polite">
                 {saveErrorMessage}
@@ -3244,6 +3243,8 @@ export default function App() {
                     isFullscreen={isPlaying}
                     onToggleFullscreen={handleTogglePlay}
                     showPrintArea={showPrintArea}
+                    showSizeHelper={showSizeHelper}
+                    onToggleSizeHelper={() => setShowSizeHelper((prev) => !prev)}
                     canvasPreset={currentCanvas.canvasPreset}
                     backgroundColor={currentCanvas.backgroundColor}
                     snapToGrid={currentCanvas.snapEnabled}

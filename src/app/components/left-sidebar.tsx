@@ -131,6 +131,21 @@ export function LeftSidebar({
         <label className="text-[10px] text-[#737373] mb-2 block uppercase tracking-wider font-light">
           Canvas
         </label>
+        <label className="control-pill mb-2 w-full h-10 border border-white/10 text-[#737373] hover:text-[#fafafa] hover:border-white/20 text-[10px] uppercase tracking-wider rounded-none transition-colors flex items-center justify-center gap-1 cursor-pointer overflow-hidden">
+          <Upload />
+          Import
+          <input
+            type="file"
+            accept="image/*,text/plain,application/json,.csv,.md"
+            className="hidden"
+            onChange={async (event) => {
+              const file = event.target.files?.[0];
+              if (!file) return;
+              await onImportFile(file);
+              event.currentTarget.value = "";
+            }}
+          />
+        </label>
         <>
           <div className="relative w-full overflow-visible z-20" ref={canvasMenuRef}>
             {isRenaming ? (
